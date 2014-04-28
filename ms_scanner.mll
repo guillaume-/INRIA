@@ -67,7 +67,7 @@ rule lexer = parse
 		{ 
 			(*let symb_start = Lexing.lexeme_start lexbuf in scanner_debug_print("Scanner:Constante:"^(int_of_string symb_start)) ; *)
 			LINT (int_of_string(Lexing.lexeme lexbuf)) }
-|   '%'['a'-'z' 'A'-'Z' '0'-'9' '_']*'%' { lexer lexbuf }
+|   '%'['a'-'z' 'A'-'Z' '0'-'9' '_' ' ' '\n' '\t' '\r']*'%' { lexer lexbuf }
 |   eof { scanner_debug_print "Scanner:Eof" ; Leof }
 |   ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']* 
     {
