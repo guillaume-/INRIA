@@ -1,0 +1,26 @@
+type integer;
+type boolean = enum (true, false);
+procedure add(integer, integer) -> integer;
+
+%TEST%
+process p1 = (
+? integer a;
+! integer b;
+)
+(| b := a
+|)
+end;
+
+process p2 = (
+? integer i;
+  integer j;
+! integer k;
+)
+(| submodule p3(k)(i, j)
+ | submodule p1(k)(i)
+|)where process p3 = (
+? integer a, b;
+! integer c;
+)(|c :=  a default b
+|)end;
+end;
