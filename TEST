@@ -24,3 +24,13 @@ process p2 = (
 )(|c :=  a default b
 |)end;
 end;
+
+process p4 = (
+? integer a, b;
+  integer test;
+! integer c;
+)
+(| c := call add(a + test, b)
+ | c := a + b
+|)
+end;
