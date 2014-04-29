@@ -18,7 +18,6 @@
   open Ms_identifier ;;
   open Ms_syntax_tree ;;
   open Ms_idhtbl ;;
-  open Ter_parser_checks ;;
   open SyntaxTree ;;
 
   let parser_debug_mode = true ;;
@@ -125,7 +124,7 @@ g_specification :
   { 
 	parser_debug_print "Parser:g_specification: complete process definition"; 
 	{
-		$2 with process_list = (gih_chk_process $1)::($2.process_list)
+		$2 with process_list = $1::($2.process_list)
 	}
   }
 ;
