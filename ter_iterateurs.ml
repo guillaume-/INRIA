@@ -351,7 +351,7 @@ module Tfr_arith_to_call:tParam  = struct
 		in let rst = vR st (s1::[s2])
 		    in (ne1, ne2, rst)
 		    
-	and chk p res = print_string (if tR res p then "appartient\n" else "non\n");if tR res p
+	and chk p res = if tR res p
 			then res
 			else sR res p
 			
