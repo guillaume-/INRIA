@@ -4,7 +4,9 @@ let main () =
       Ms_parser.g_specification Ms_scanner.lexer lexbuf
   with End_of_file -> exit 0
 
-let t1 = Ter_convert.cvrt_spec (main());;
+let t0 = Ter_parser_checks.chk_spec (main());;
+
+let t1 = Ter_convert.cvrt_spec t0;;
 
 (*
 let t2 = Ter_iterateurs.do_transfo t1;;
