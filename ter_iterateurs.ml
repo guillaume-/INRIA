@@ -420,7 +420,7 @@ end
 
 module Tfr_no_submodule:tParam = struct
 
-	module AtcParam : tRef = struct
+	module NSParam : tRef = struct
 	type r = process
 	type p = unit
 	let creerRef = {
@@ -441,10 +441,10 @@ module Tfr_no_submodule:tParam = struct
 	let verifRef _ _ = ()
 	end
 
-	include Identite(AtcParam)
-	let gR = AtcParam.getRef
-	let sR = AtcParam.setRef
-	let tR = AtcParam.tst
+	include Identite(NSParam)
+	let gR = NSParam.getRef
+	let sR = NSParam.setRef
+	let tR = NSParam.tst
 
 	let rec tfr_process(p:t)=
 		let body_without_sub p =
