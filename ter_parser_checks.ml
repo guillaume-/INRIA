@@ -231,9 +231,20 @@ let chk_body (p:process) = {
 	instantiation_list = chk_instantiation p p.body.instantiation_list; (* check that the variables used are already defined and process used are already defined *)
 }
 
-let gih_chk_process (p:process) = 
+let chk_process (p:process) = 
 print_string ("process "^p.header.process_name^"...\n");
 {
 	header = (chk_header p.header);
 	body = (chk_body p);
+}
+
+let rec chk_processes = function
+	|[] -> []
+	|p::l -> (chk_process p)::(chk_processes l)
+
+let chk_spec sp = {
+	process_list = chk_processes sp.process_list;
+	type_declaration_list = sp.type_declaration_list;
+	procedure_declaration_list = sp.procedure_declaration_list;
+
 }
