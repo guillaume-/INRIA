@@ -28,14 +28,13 @@ end
 module Transformation(T: tParam) = struct 
     let transform_id s i = T.tfr_identifier s i
     
-    let transform_id_set s is = T.tfr_identifier_set s is (* comment faire pour modifier chaque élément du set ? *)
+    let transform_id_set s is = T.tfr_identifier_set s is
 
-  
     let transform_typed_var_set s tvs =  
 	let nttn, s1 = transform_id s tvs.tv_type_name
 	and nvs, s2 = transform_id_set s tvs.variant_set
 	in let rs = T.verifT s (s1::[s2])
-	    in  T.tfr_typed_var_set rs nttn nvs
+	    in T.tfr_typed_var_set rs nttn nvs
 
     let transform_direc s d = T.tfr_direc s d
    
@@ -118,10 +117,13 @@ module type tRef = sig
     type p 
    
     val creerRef: r
-    val getRef: r -> p
+    val getRef: r -> r
     val setRef: r -> p -> r 
-    val tst: p -> string -> bool
+    val tstRef: r -> p -> bool
     val verifRef: r -> r list -> r
+    
+    val getPart: string -> p
+
 end
 
 module IdParam : tRef = struct
@@ -131,8 +133,11 @@ module IdParam : tRef = struct
     let creerRef = ()
     let getRef _ = ()
     let setRef _ _ = ()
-    let tst _ _= true
+    let tstRef _ _= true
     let verifRef _ _ = ()
+    
+    let getPart _ = ()
+
 end
 
 module Identite(R : tRef):tParam with type t = R.r = struct
@@ -299,57 +304,66 @@ module Identite(R : tRef):tParam with type t = R.r = struct
 end
 
 
-module Tfr_arith_to_call:tParam = struct
-    module AtcParam : tRef = struct
-	type r = specification
-	type p = procedure_declaration list
+module Tfr_arith_to_call:tParam  = struct
+    module AtcParam : tRef with type r = procedure_declaration list = struct
+	type r = procedure_declaration list
+	type p = procedure_declaration
 	
-	let creerRef =  {
-	    process_list = [];
-	    type_declaration_list =[];
-	    procedure_declaration_list =[];
-	}
-	let getRef r = r.procedure_declaration_list
-	let setRef r pdl = 
-	    ({
-	      process_list = r.process_list;
-	      type_declaration_list = r.type_declaration_list;
-	      procedure_declaration_list = (pdl@r.procedure_declaration_list);
-	    })
-	 let tst p id =  (List.exists (fun d -> d.procedure_name = id) p)
-	 let verifRef s =
-	      let rec vp r = function
-	      | [] -> r
-	      | e::l -> if r = s 
-			  then if e != s then vp e l else vp r l
-			  else if e != r then failwith "maaiiiiis ??" else vp r l
-	  in vp s
+	let creerRef = []
+	let getRef r = r
+	let setRef r p = p::r
+	 let tstRef r p = 
+			(List.exists (fun d -> d = p) r)
+
+	let verifRef s =
+	      let rec verif = function
+	      | [] -> s
+	      | e::l ->  let reste = verif l 
+			in let rec v = function
+			      | [] -> reste
+			      | t::q -> let rst = v q
+					in if tstRef rst t then rst else setRef rst t
+			    in v e
+	  in verif
+	  
+	let getPart s =  {procedure_name = s ;
+			  procedure_input_list = ["integer";"integer"] ; 
+			  procedure_output = "integer" ;}
+	
     end
     include Identite(AtcParam)
     
     let gR = AtcParam.getRef
     let sR = AtcParam.setRef 
-    let tR = AtcParam.tst 
+    let tR = AtcParam.tstRef
+    let vR = AtcParam.verifRef
     
+    let tfr_spec s pl tdl pdl = ({
+	process_list = pl;
+	type_declaration_list = tdl;
+	procedure_declaration_list = vR s [pdl];
+    },s) 
 
-    let rec tfr_sig_exp (s:t) exp =  (*ok*)
+    let rec tfr_sig_exp (s:t) exp =  
 	let trait st e1 e2 = 
 		let (ne1, s1) = tfr_sig_exp st e1 
 		and (ne2, s2) = tfr_sig_exp st e2
-		in let rst = AtcParam.verifRef st (s1::[s2])
-		    in ne1, ne2, rst
+		in let rst = vR st (s1::[s2])
+		    in (ne1, ne2, rst)
 		    
-	and chk id res = let pdl = gR res
-			in if tR pdl id
-			    then res
-			    else sR res pdl
+	and chk p res = print_string (if tR res p then "appartient\n" else "non\n");if tR res p
+			then res
+			else sR res p
+			
 	in match exp with
 		| Plus(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
-				  in ((FunctionCall("add", [ne1; ne2])) , (chk "add" rs))
+				  in ((FunctionCall("add", [ne1; ne2])),
+				      (chk (AtcParam.getPart "add") rs))
 		| Minus(e1, e2) ->let (ne1, ne2, rs) = trait s e1 e2
-				in  ((FunctionCall("sub", [ne1; ne2])) , (chk "add" rs))
+				in  ((FunctionCall("sub", [ne1; ne2])) , (chk (AtcParam.getPart "sub") rs))
 		| Times(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
-				in ((FunctionCall("mul", [ne1; ne2])) , (chk "add" rs))
+				in ((FunctionCall("mul", [ne1; ne2])) , (chk (AtcParam.getPart "mul") rs))
+
 		| EnumVariantAtom(i) -> let ni,rs = tfr_identifier s i
 			in (EnumVariantAtom(ni),rs)
 		| SignalAtom(i) -> let ni,rs = tfr_identifier s i
@@ -393,14 +407,14 @@ module Tfr_arith_to_call:tParam = struct
 		| FunctionCall(i, el) -> 
 			let ni,s1 = tfr_identifier s i
 			and nel,ls1 = List.fold_right (fun e -> fun (r,rs) -> let (ne,ns) = (tfr_sig_exp s e) in (ne::r),(ns::rs)) el ([],[])
-			in let rs = AtcParam.verifRef s (s1::ls1)
+			in let rs = vR s (s1::ls1)
 			in (FunctionCall(ni,nel),rs) 
 		| InAtom(e, tvs) ->  
 			let ne,s1 = tfr_sig_exp s e
 			and nttn,s2 = tfr_identifier s tvs.tv_type_name
 			and nvs,s3 = tfr_identifier_set s tvs.variant_set
 			in  let ntvs,s4 = tfr_typed_var_set s nttn nvs
-			    in let rs = AtcParam.verifRef s [s1;s2;s3;s4]
+			    in let rs = vR s [s1;s2;s3;s4]
 			    in (InAtom(ne, ntvs),rs)
 end
 
