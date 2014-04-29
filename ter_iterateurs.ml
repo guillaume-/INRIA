@@ -418,6 +418,98 @@ module Tfr_arith_to_call:tParam  = struct
 			    in (InAtom(ne, ntvs),rs)
 end
 
+module Tfr_no_submodule:tParam = struct
+
+	module AtcParam : tRef = struct
+	type r = process
+	type p = unit
+	let creerRef = {
+		header = {
+			process_name = "";
+			signal_declarations = [];
+			local_process_list = [];
+		};
+		body = {
+			assignment_list = [];
+			constraint_list = [];
+			instantiation_list = [];
+		};
+	}
+	let getRef _ = ()
+	let setRef _ _ = ()
+	let tst _ _= true
+	let verifRef _ _ = ()
+	end
+
+	include Identite(AtcParam)
+	let gR = AtcParam.getRef
+	let sR = AtcParam.setRef
+	let tR = AtcParam.tst
+
+	let rec tfr_process(p:t)=
+		let body_without_sub p =
+			let get_process name lp =
+				let rec local_search name =
+					|[] -> failwith(name^" is not defined")
+					|p::l ->	if(p.header.process_name = name)
+								then p
+								else local_search name l
+				in try
+					gih_get_process name
+				with Not_found -> local_search name lp
+			and get_signal name declarations =
+				let get_s name =
+					|[] -> failwith("Signal "^name^" not found\n")
+					|d::l ->	if(d.signal_name = name)
+								then d
+								else get_s name l
+				in	get_s name
+					((declarations.input_signal_list
+					@declarations.output_signal_list)
+					@(declarations.local_signal_list))
+			and cvrt s i declarations =
+					TODO
+			and add_sub_list local_processes local_var body = 
+				let new_assign lp lv i =
+					let p = get_process i.instance_process_name lp
+					in
+					TODO
+				in function
+				|[] -> body.assignment_list
+				|inst::l ->	(new_assign local_processes local_var inst)
+							::(add_sub_list local_processes local_var body l)
+			and add_subs_constraints constraints local_processes vars =
+				let new_sub_cs lp v i =
+					let p = get_process i.instance_process_name lp
+					in let new_constraint c c_process_var wanted_var i =
+						constraint_kind = c.constraint_kind;
+						left_signal_name = cvrt (get_signal c.left_signal_name c_process_var) i c_process_var;
+						right_signal_name = cvrt (get_signal c.right_signal_name c_process_var) i c_process_var;
+					in match(p.body.constraint_list)with
+						|[] -> []
+						|c::l -> new_constraint c p.header.signal_declarations v i
+				} in function
+				|[] -> constraints
+				|i::l -> 	(new_sub_cs local_processes vars i)
+							::(add_subs_constraints constraints local_processes vars l)
+			in {
+				assignment_list = 	add_sub_list
+										p.header.local_process_list
+										p.header.signal_declarations.local_signal_list
+										p.body
+										p.body.instantiation_list;
+				constraint_list =	add_subs_constraints
+										p.body.constraint_list
+										p.header.local_process_list
+										p.header.signal_declarations
+										p.body.instantiation_list;
+				instantiation_list = [];
+		} in {
+		header = p.header;
+		body = body_without_sub p;
+	}
+end
+
 let do_transfo prog =
   let module Trans = (*Identite(IdParam)*) Tfr_arith_to_call
   in let module Apply_transfo = Transformation(Trans) 
