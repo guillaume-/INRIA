@@ -40,19 +40,22 @@ let chk_header head = {
 }
 
 let chk_left_s name declarations =
-	get_sig_type name  (((declarations.input_signal_list)@(declarations.output_signal_list))@(declarations.local_signal_list))
+	get_sig_type name	(
+						((declarations.input_signal_list)@(declarations.output_signal_list))@(declarations.local_signal_list))
 
 let chk_right_s name declarations =
-	get_sig_type name (((declarations.input_signal_list)@(declarations.output_signal_list))@(declarations.local_signal_list))
+	get_sig_type name	(
+						((declarations.input_signal_list)
+						@(declarations.output_signal_list))
+						@(declarations.local_signal_list)
+						)
 
 let rec chk_constraint_list p = function
 	|[]		-> []
 	|c::l	->	try(let t_ou = chk_left_s c.left_signal_name p.header.signal_declarations
 					in 
 					try(let t_in = chk_right_s c.right_signal_name p.header.signal_declarations
-						in if(t_ou = t_in)
-						then c::(chk_constraint_list p l)
-						else failwith ("Incompatible types\n")
+						in c::(chk_constraint_list p l)
 					)
 					with _ -> failwith ("Constraint using as input the undefined signal : "^c.right_signal_name^"\n")
 				)
@@ -83,10 +86,15 @@ let rec chk_list_sig sig_declare = function
 let rec chk_sig sig_declare s =
 	try(
 		get_sig_type s
-		(sig_declare.input_signal_list
-		@sig_declare.output_signal_list
+		((sig_declare.input_signal_list
+		@sig_declare.output_signal_list)
 		@sig_declare.local_signal_list)
 	)with Not_found ->
+		try(
+			match(gih_get_target s)with
+				|IH_enum_variant(t) -> t.tv_type_name
+				|_ -> failwith("Uncorrect signal\n")
+		)with Not_found ->
 			failwith("Signal "^(Identifier.of_string s)^" is not defined\n")
 
 let rec chk_exp p = function
@@ -125,7 +133,10 @@ let rec chk_exp p = function
 		else failwith("Bad type, integer wanted\n")
 	| ClockPlus(e1, e2)
 	| ClockMinus(e1, e2)
-	| ClockTimes(e1, e2)
+	| ClockTimes(e1, e2) ->
+		if((chk_exp p e1) = (chk_exp p e2))
+		then (chk_exp p e1)
+		else (chk_exp p e1)
 	| Delay(e1, e2)
 	| Default(e1, e2)
 	| EqualityAtom(e1, e2) ->
