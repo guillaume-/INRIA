@@ -12,14 +12,14 @@ type ref = {
 
 		let creerRef s = {
 			spec = s ;
-			proc_cur = [];
+			proc_cur = s.process_list;
 			proc_ref = {
 				header = {
 					process_name = "";
 					signal_declarations = {
 						input_signal_list = [];
-						output_signal_list = [] ;
-						local_signal_list = [] ;
+						output_signal_list = [];
+						local_signal_list = [];
 					};
 					local_process_list = [];
 				};
@@ -32,9 +32,9 @@ type ref = {
 		}
 		let getRef _ = {
 			spec = { 
-				process_list = [] ;
-				type_declaration_list = [] ;
-				procedure_declaration_list = [] ;
+				process_list = [];
+				type_declaration_list = [];
+				procedure_declaration_list = [];
 			};
 			proc_cur = [];
 			proc_ref = {
@@ -42,8 +42,8 @@ type ref = {
 					process_name = "";
 					signal_declarations = {
 						input_signal_list = [];
-						output_signal_list = [] ;
-						local_signal_list = [] ;
+						output_signal_list = [];
+						local_signal_list = [];
 					};
 					local_process_list = [];
 				};
@@ -56,9 +56,9 @@ type ref = {
 		}
 		let setRef _ _ = {
 			spec = { 
-				process_list = [] ;
-				type_declaration_list = [] ;
-				procedure_declaration_list = [] ;
+				process_list = [];
+				type_declaration_list = [];
+				procedure_declaration_list = [];
 			};
 			proc_cur = [];
 			proc_ref = {
@@ -66,8 +66,8 @@ type ref = {
 					process_name = "";
 					signal_declarations = {
 						input_signal_list = [];
-						output_signal_list = [] ;
-						local_signal_list = [] ;
+						output_signal_list = [];
+						local_signal_list = [];
 					};
 					local_process_list = [];
 				};
@@ -79,11 +79,11 @@ type ref = {
 			};
 		}
 		let tstRef _ _= true
-		let verifRef _ _ =  {
-			spec = { 
-				process_list = [] ;
-				type_declaration_list = [] ;
-				procedure_declaration_list = [] ;
+		let verifRef _ _ = {
+			spec = {
+				process_list = [];
+				type_declaration_list = [];
+				procedure_declaration_list = [];
 			};
 			proc_cur = [];
 			proc_ref = {
@@ -91,8 +91,8 @@ type ref = {
 					process_name = "";
 					signal_declarations = {
 						input_signal_list = [];
-						output_signal_list = [] ;
-						local_signal_list = [] ;
+						output_signal_list = [];
+						local_signal_list = [];
 					};
 					local_process_list = [];
 				};
