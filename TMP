@@ -1,0 +1,24 @@
+	let tfr_typed_var_set t type_name v =
+	if(List.length (List.filter (fun x -> x.tv_type_name = type_name) t.spec.type_declaration_list) > 1)
+	then raise (Multiple_definition("Multiple definition of type "^type_name^"\n"))
+	else	({
+				tv_type_name = type_name;
+				variant_set = v;
+			}, t)
+
+	let tfr_sig_decla t sName sType sDir =
+	if(List.exists (fun x -> x.tv_type_name = sType) t.spec.type_declaration_list)
+	then
+		if(List.length (List.filter
+							(fun x -> x.signal_name = sName)
+							( (t.proc_cur.header.signal_declarations.input_signal_list
+							@ t.proc_cur.header.signal_declarations.output_signal_list)
+							@ t.proc_cur.header.signal_declarations.local_signal_list )
+						) > 1)
+		then raise (Multiple_definition("In process "^t.proc_cur.header.process_name^", multiple definition of signal "^sName^"\n"))
+		else ({
+				signal_name = sName;
+				signal_type = sType;
+				signal_direction = sDir;
+			}, t)
+	else raise (Not_define("In process "^t.proc_cur.header.process_name^", usage of the not define type "^sType^"at the declaration of"^sName^"\n"))
