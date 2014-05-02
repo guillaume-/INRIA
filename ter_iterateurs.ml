@@ -32,69 +32,60 @@ module Transformation(T: tParam) = struct
 
     let transform_typed_var_set s tvs =  
 	let nttn, s1 = transform_id s tvs.tv_type_name
-	and nvs, s2 = transform_id_set s tvs.variant_set
-	in let rs = T.verifT s (s1::[s2])
-	    in T.tfr_typed_var_set rs nttn nvs
+	in let nvs, s2 = transform_id_set s1 tvs.variant_set
+	    in T.tfr_typed_var_set s2 nttn nvs
 
     let transform_direc s d = T.tfr_direc s d
    
     let transform_sig_decla s sd = 
 	let nsn,s1 = transform_id s sd.signal_name 
-	and nst,s2 = transform_id s sd.signal_type
-	and nd,s3 = transform_direc s sd.signal_direction
-	in let rs = T.verifT s (s1::s2::[s3])
-	    in T.tfr_sig_decla rs nsn nst nd
+	in let nst,s2 = transform_id s1 sd.signal_type
+	    in let nd,s3 = transform_direc s2 sd.signal_direction
+		in T.tfr_sig_decla s3 nsn nst nd
       
    
     let transform_sig_exp s e = T.tfr_sig_exp s e
     
     let transform_assign s a = 
 	let nasn,s1 = transform_id s a.assigned_signal_name
-	and nse,s2 = transform_sig_exp s a.signal_expression
-	in let rs = T.verifT s (s1::[s2])
-	    in T.tfr_assign rs nasn nse
+	in let nse,s2 = transform_sig_exp s1 a.signal_expression
+	    in T.tfr_assign s2 nasn nse
 
     let transform_sconstr_k s sck = T.tfr_sconstr_k s sck
     
     let transform_sconstr s sc = 
 	let nck,s1 = transform_sconstr_k s sc.constraint_kind
-	and nlsn,s2 = transform_id s sc.left_signal_name
-	and nrsn,s3 = transform_id s sc.right_signal_name
-	in let rs = T.verifT s (s1::s2::[s3])
-	    in T.tfr_sconstr rs nck nlsn nrsn
+	in let nlsn,s2 = transform_id s1 sc.left_signal_name
+	    in let nrsn,s3 = transform_id s2 sc.right_signal_name
+		in T.tfr_sconstr s3 nck nlsn nrsn
     
     let transform_inst s i = 
-	let (niie,ls1) = List.fold_right (fun e -> fun (r,rs) -> let ne,s1 = (transform_sig_exp s e) in ((ne::r),(s1::rs))) i.instance_input_expressions ([],[])
-	and (nios,ls2) = List.fold_right (fun o -> fun (r,rs) -> let no,s1 = (transform_id s o) in ((no::r),(s1::rs))) i.instance_output_signals ([],[])
-	and nipn,s3 = transform_id s i.instance_process_name
-	in let rs = T.verifT s (s3::(ls1@ls2))
-	    in T.tfr_inst rs nipn nios niie
+	let niie,s1 = List.fold_right (fun e -> fun (r,rs) -> let ne,ns = (transform_sig_exp rs e) in ((ne::r),ns)) i.instance_input_expressions ([],s)
+	in let (nios,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_id s o) in ((no::r),ns)) i.instance_output_signals ([],s1)
+	    in let nipn,s3 = transform_id s2 i.instance_process_name
+		    in T.tfr_inst s3 nipn nios niie
 
       let transform_proc_bd s pbd = 
-	let (nal,ls1) = List.fold_right (fun a -> fun (r,rs) -> let na,s1 = (transform_assign s a) in (na::r),(s1::rs)) pbd.assignment_list ([],[])
-	and (ncl,ls2) = List.fold_right (fun c -> fun (r,rs) -> let nc,s1 = (transform_sconstr s c) in (nc::r),(s1::rs)) pbd.constraint_list ([],[])
-	and (nil,ls3) = List.fold_right (fun i -> fun (r,rs) -> let ni,s1 = (transform_inst s i) in (ni::r),(s1::rs)) pbd.instantiation_list ([],[])
-	in let rs = T.verifT s (ls1@ls2@ls3)
-	    in T.tfr_proc_bd rs nal ncl nil 
+	let (nal,s1) = List.fold_right (fun a -> fun (r,rs) -> let na,ns = (transform_assign s a) in (na::r),ns) pbd.assignment_list ([],s)
+	in let (ncl,s2) = List.fold_right (fun c -> fun (r,rs) -> let nc,ns = (transform_sconstr s c) in (nc::r),ns) pbd.constraint_list ([],s1)
+	    in let(nil,s3) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_inst s i) in (ni::r),ns) pbd.instantiation_list ([],s2)
+		in T.tfr_proc_bd s3 nal ncl nil 
     
       let transform_sig_declas s sds = 
-	let (nisl,ls1) = List.fold_right (fun i -> fun (r,rs) -> let ni,s1 = (transform_sig_decla s i) in (ni::r),(s1::rs)) sds.input_signal_list ([],[])
-	and (nosl,ls2) = List.fold_right (fun o -> fun (r,rs) -> let no,s1 = (transform_sig_decla s o) in (no::r),(s1::rs)) sds.output_signal_list ([],[]) 
-	and (nlsl,ls3) = List.fold_right (fun l -> fun (r,rs) -> let nl,s1 = (transform_sig_decla s l) in (nl::r),(s1::rs)) sds.local_signal_list ([],[])  
-	in let rs = T.verifT s (ls1@ls2@ls3)
-	    in T.tfr_sig_declas rs nisl nosl nlsl
+	let (nisl,s1) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_sig_decla s i) in (ni::r),ns) sds.input_signal_list ([],s)
+	in let (nosl,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_sig_decla s o) in (no::r),ns) sds.output_signal_list ([],s1) 
+	    in let (nlsl,s3) = List.fold_right (fun l -> fun (r,rs) -> let nl,ns = (transform_sig_decla s l) in (nl::r),ns) sds.local_signal_list ([],s2)  
+		in T.tfr_sig_declas s3 nisl nosl nlsl
     
-     let rec transform_process s p = 
+      let rec transform_process s p = 
 	let nh,s1 = transform_proc_hd s p.header
-	and nb,s2 = transform_proc_bd s p.body
-	in let rs1 = T.verifT s (s1::[s2])
-	    in T.tfr_process rs1 nh nb
-     and transform_proc_hd s phd = 
-	let (nlpl,ls1) = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_process s p) in (np::r),(s1::rs)) phd.local_process_list ([],[])
+	in let nb,s2 = transform_proc_bd s1 p.body
+	    in T.tfr_process s2 nh nb
+      and transform_proc_hd s phd = 
+	let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process s p) in (np::r),ns) phd.local_process_list ([],s)
 	and npn,s2 = transform_id s phd.process_name
 	and sdn,s3 = transform_sig_declas s phd.signal_declarations
-	in let rs2 = T.verifT s (s3::(s2::ls1))
-	    in T.tfr_proc_hd rs2 npn sdn nlpl
+	    in T.tfr_proc_hd s3 npn sdn nlpl
 	
      let transform_proced_decla s pd = 
 	let nil,ls1 = List.fold_right (fun i -> fun (r,rs) -> let ni,s1 = (transform_id s i) in (ni::r),(s1::rs)) pd.procedure_input_list ([],[])
@@ -418,97 +409,59 @@ module Tfr_arith_to_call:tParam  = struct
 			    in (InAtom(ne, ntvs),rs)
 end
 
-module Tfr_no_submodule:tParam = struct
+(*module Tfr_chek_spec:tParam = struct
 
-	module NSParam : tRef = struct
-	type r = process
-	type p = unit
-	let creerRef = {
-		header = {
-			process_name = "";
-			signal_declarations = [];
-			local_process_list = [];
-		};
-		body = {
-			assignment_list = [];
-			constraint_list = [];
-			instantiation_list = [];
-		};
-	}
-	let getRef _ = ()
-	let setRef _ _ = ()
-	let tst _ _= true
-	let verifRef _ _ = ()
+	module CsParam : tRef = struct
+	    type r = 
+		{ 
+		    sprec : specification
+		    proc_cur : process
+		    proc_ref : process
+		}
+	    type p = unit
+	    let creerRef = {
+		    spec = 
+			{ 
+			    process_list = [] ;
+			    type_declaration_list = [] ;
+			    procedure_declaration_list = [] ;
+			}
+		    proc_cur = {
+				header = {
+				    process_name = "";
+				    signal_declarations = [];
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      }
+		    proc_ref = {
+				header = {
+				    process_name = "";
+				    signal_declarations = [];
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      }
+	    }
+	    let getRef _ = creerRef
+	    let setRef _ _ = creerRef
+	    let tstRef _ _= true
+	    let verifRef _ _ = creerRef
 	end
 
-	include Identite(NSParam)
+	include Identite(CsParam)
 	let gR = NSParam.getRef
 	let sR = NSParam.setRef
 	let tR = NSParam.tst
-
-	let rec tfr_process(p:t)=
-		let body_without_sub p =
-			let get_process name lp =
-				let rec local_search name =
-					|[] -> failwith(name^" is not defined")
-					|p::l ->	if(p.header.process_name = name)
-								then p
-								else local_search name l
-				in try
-					gih_get_process name
-				with Not_found -> local_search name lp
-			and get_signal name declarations =
-				let get_s name =
-					|[] -> failwith("Signal "^name^" not found\n")
-					|d::l ->	if(d.signal_name = name)
-								then d
-								else get_s name l
-				in	get_s name
-					((declarations.input_signal_list
-					@declarations.output_signal_list)
-					@(declarations.local_signal_list))
-			and cvrt s i declarations =
-					TODO
-			and add_sub_list local_processes local_var body = 
-				let new_assign lp lv i =
-					let p = get_process i.instance_process_name lp
-					in
-					TODO
-				in function
-				|[] -> body.assignment_list
-				|inst::l ->	(new_assign local_processes local_var inst)
-							::(add_sub_list local_processes local_var body l)
-			and add_subs_constraints constraints local_processes vars =
-				let new_sub_cs lp v i =
-					let p = get_process i.instance_process_name lp
-					in let new_constraint c c_process_var wanted_var i =
-						constraint_kind = c.constraint_kind;
-						left_signal_name = cvrt (get_signal c.left_signal_name c_process_var) i c_process_var;
-						right_signal_name = cvrt (get_signal c.right_signal_name c_process_var) i c_process_var;
-					in match(p.body.constraint_list)with
-						|[] -> []
-						|c::l -> new_constraint c p.header.signal_declarations v i
-				} in function
-				|[] -> constraints
-				|i::l -> 	(new_sub_cs local_processes vars i)
-							::(add_subs_constraints constraints local_processes vars l)
-			in {
-				assignment_list = 	add_sub_list
-										p.header.local_process_list
-										p.header.signal_declarations.local_signal_list
-										p.body
-										p.body.instantiation_list;
-				constraint_list =	add_subs_constraints
-										p.body.constraint_list
-										p.header.local_process_list
-										p.header.signal_declarations
-										p.body.instantiation_list;
-				instantiation_list = [];
-		} in {
-		header = p.header;
-		body = body_without_sub p;
-	}
-end
+end*)
 
 let do_transfo prog =
   let module Trans = (*Identite(IdParam)*) Tfr_arith_to_call
