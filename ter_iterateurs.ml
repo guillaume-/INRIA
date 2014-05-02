@@ -101,6 +101,14 @@ module Transformation(T: tParam) = struct
 	    and npdl,ls3 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_proced_decla sp p) in (np::r),(s1::rs)) s.procedure_declaration_list ([],[])
 	    in let rs =  T.verifT sp (ls1@ls2@ls3)
 		in let (r,_) = T.tfr_spec rs npl ntdl npdl in r
+
+(*      let verif_spec s=
+	let sp = T.creerT
+	    in let npl,ls1 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_process sp p) in (np::r),(s1::rs)) s.process_list ([],[])
+	    and ntdl,ls2 = List.fold_right (fun t -> fun (r,rs) -> let nt,s1 = (transform_typed_var_set sp t) in (nt::r),(s1::rs)) s.type_declaration_list ([],[])
+	    and npdl,ls3 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_proced_decla sp p) in (np::r),(s1::rs)) s.procedure_declaration_list ([],[])
+	    in let rs =  T.verifT sp (ls1@ls2@ls3)
+		in let (_,r) = T.tfr_spec rs npl ntdl npdl in r*)
 end
 
 module type tRef = sig
@@ -409,27 +417,35 @@ module Tfr_arith_to_call:tParam  = struct
 			    in (InAtom(ne, ntvs),rs)
 end
 
-(*module Tfr_chek_spec:tParam = struct
+module Tfr_chk_spec:tParam = struct
 
 	module CsParam : tRef = struct
 	    type r = 
 		{ 
-		    sprec : specification
-		    proc_cur : process
-		    proc_ref : process
+		    ok : bool ;
+		    spec : specification ;
+		    proc_cur : process;
+		    proc_ref : process;
 		}
 	    type p = unit
-	    let creerRef = {
+	    let creerRef = 
+		{
+		    ok = true;
 		    spec = 
 			{ 
 			    process_list = [] ;
 			    type_declaration_list = [] ;
 			    procedure_declaration_list = [] ;
-			}
+			} ;
 		    proc_cur = {
 				header = {
 				    process_name = "";
-				    signal_declarations = [];
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
 				    local_process_list = [];
 				};
 				body = {
@@ -437,11 +453,16 @@ end
 				    constraint_list = [];
 				    instantiation_list = [];
 				};
-			      }
+			      };
 		    proc_ref = {
 				header = {
 				    process_name = "";
-				    signal_declarations = [];
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
 				    local_process_list = [];
 				};
 				body = {
@@ -449,19 +470,42 @@ end
 				    constraint_list = [];
 				    instantiation_list = [];
 				};
-			      }
-	    }
+			      };
+		}
 	    let getRef _ = creerRef
 	    let setRef _ _ = creerRef
 	    let tstRef _ _= true
 	    let verifRef _ _ = creerRef
+	    let getPart _ = ()
 	end
 
 	include Identite(CsParam)
-	let gR = NSParam.getRef
-	let sR = NSParam.setRef
-	let tR = NSParam.tst
-end*)
+	let gR = CsParam.getRef
+	let sR = CsParam.setRef
+	let tR = CsParam.tstRef
+	let vR = CsParam.verifRef
+	
+	(*let tfr_proced_decla s name inp outp =
+	    let list_nom = List.find
+	    let testUnique = if *)
+	
+	(*val tfr_spec:  t -> process list -> typed_variant_set list -> procedure_declaration list -> specification * t*)
+	(*val tfr_proced_decla:  t -> Identifier.t -> Identifier.t list -> Identifier.t -> procedure_declaration * t
+	val tfr_process: t -> process_header -> process_body -> process * t
+	val tfr_proc_hd: t -> Identifier.t -> signal_declarations -> process list -> process_header * t
+	val tfr_sig_declas: t -> signal_declaration list -> signal_declaration list -> signal_declaration list -> signal_declarations * t
+	val tfr_proc_bd: t -> assignment list -> sconstraint list -> instantiation list -> process_body * t
+	val tfr_inst: t -> Identifier.t -> Identifier.t list -> signal_expression list -> instantiation * t
+	val tfr_sconstr: t -> sconstraint_kind -> Identifier.t -> Identifier.t -> sconstraint * t
+	val tfr_sconstr_k: t -> sconstraint_kind -> sconstraint_kind * t
+	val tfr_assign: t -> Identifier.t -> signal_expression -> assignment * t
+	val tfr_sig_exp: t -> signal_expression -> signal_expression * t
+	val tfr_sig_decla: t -> Identifier.t -> Identifier.t -> direction -> signal_declaration * t
+	val tfr_direc: t -> direction -> direction * t
+	val tfr_typed_var_set: t -> Identifier.t -> IdentifierSet.t -> typed_variant_set * t
+	val tfr_identifier: t -> Identifier.t -> Identifier.t * t
+	val tfr_identifier_set:  t -> IdentifierSet.t -> IdentifierSet.t * t*)
+end
 
 let do_transfo prog =
   let module Trans = (*Identite(IdParam)*) Tfr_arith_to_call
