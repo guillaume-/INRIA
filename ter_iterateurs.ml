@@ -4,7 +4,7 @@ open Ms_identifier ;;
 
 module type tParam = sig
     type t
-    val creerT : t
+    val creerT : specification -> t 
     val verifT : t -> t list -> t
     
     val tfr_spec:  t -> process list -> typed_variant_set list -> procedure_declaration list -> specification * t
@@ -61,20 +61,20 @@ module Transformation(T: tParam) = struct
     
     let transform_inst s i = 
 	let niie,s1 = List.fold_right (fun e -> fun (r,rs) -> let ne,ns = (transform_sig_exp rs e) in ((ne::r),ns)) i.instance_input_expressions ([],s)
-	in let (nios,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_id s o) in ((no::r),ns)) i.instance_output_signals ([],s1)
+	in let (nios,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_id rs o) in ((no::r),ns)) i.instance_output_signals ([],s1)
 	    in let nipn,s3 = transform_id s2 i.instance_process_name
 		    in T.tfr_inst s3 nipn nios niie
 
       let transform_proc_bd s pbd = 
-	let (nal,s1) = List.fold_right (fun a -> fun (r,rs) -> let na,ns = (transform_assign s a) in (na::r),ns) pbd.assignment_list ([],s)
-	in let (ncl,s2) = List.fold_right (fun c -> fun (r,rs) -> let nc,ns = (transform_sconstr s c) in (nc::r),ns) pbd.constraint_list ([],s1)
-	    in let(nil,s3) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_inst s i) in (ni::r),ns) pbd.instantiation_list ([],s2)
+	let (nal,s1) = List.fold_right (fun a -> fun (r,rs) -> let na,ns = (transform_assign rs a) in (na::r),ns) pbd.assignment_list ([],s)
+	in let (ncl,s2) = List.fold_right (fun c -> fun (r,rs) -> let nc,ns = (transform_sconstr rs c) in (nc::r),ns) pbd.constraint_list ([],s1)
+	    in let(nil,s3) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_inst rs i) in (ni::r),ns) pbd.instantiation_list ([],s2)
 		in T.tfr_proc_bd s3 nal ncl nil 
     
       let transform_sig_declas s sds = 
-	let (nisl,s1) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_sig_decla s i) in (ni::r),ns) sds.input_signal_list ([],s)
-	in let (nosl,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_sig_decla s o) in (no::r),ns) sds.output_signal_list ([],s1) 
-	    in let (nlsl,s3) = List.fold_right (fun l -> fun (r,rs) -> let nl,ns = (transform_sig_decla s l) in (nl::r),ns) sds.local_signal_list ([],s2)  
+	let (nisl,s1) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_sig_decla rs i) in (ni::r),ns) sds.input_signal_list ([],s)
+	in let (nosl,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_sig_decla rs o) in (no::r),ns) sds.output_signal_list ([],s1) 
+	    in let (nlsl,s3) = List.fold_right (fun l -> fun (r,rs) -> let nl,ns = (transform_sig_decla rs l) in (nl::r),ns) sds.local_signal_list ([],s2)  
 		in T.tfr_sig_declas s3 nisl nosl nlsl
     
       let rec transform_process s p = 
@@ -82,25 +82,23 @@ module Transformation(T: tParam) = struct
 	in let nb,s2 = transform_proc_bd s1 p.body
 	    in T.tfr_process s2 nh nb
       and transform_proc_hd s phd = 
-	let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process s p) in (np::r),ns) phd.local_process_list ([],s)
-	and npn,s2 = transform_id s phd.process_name
-	and sdn,s3 = transform_sig_declas s phd.signal_declarations
-	    in T.tfr_proc_hd s3 npn sdn nlpl
+	let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) phd.local_process_list ([],s)
+	in let npn,s2 = transform_id s1 phd.process_name
+	    in let sdn,s3 = transform_sig_declas s2 phd.signal_declarations
+		in T.tfr_proc_hd s3 npn sdn nlpl
 	
      let transform_proced_decla s pd = 
-	let nil,ls1 = List.fold_right (fun i -> fun (r,rs) -> let ni,s1 = (transform_id s i) in (ni::r),(s1::rs)) pd.procedure_input_list ([],[])
-	and npn,s2 = transform_id s pd.procedure_name
-	and npo,s3 = transform_id s pd.procedure_output
-	in let rs = T.verifT s (s3::(s2::ls1))
-	    in T.tfr_proced_decla rs npn nil npo
+	let nil,s1 = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_id rs i) in (ni::r),ns) pd.procedure_input_list ([],s)
+	in let npn,s2 = transform_id s1 pd.procedure_name
+	    in let npo,s3 = transform_id s2 pd.procedure_output
+		in T.tfr_proced_decla s3 npn nil npo
  
      let transform_spec s= 
-	let sp = T.creerT
-	    in let npl,ls1 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_process sp p) in (np::r),(s1::rs)) s.process_list ([],[])
-	    and ntdl,ls2 = List.fold_right (fun t -> fun (r,rs) -> let nt,s1 = (transform_typed_var_set sp t) in (nt::r),(s1::rs)) s.type_declaration_list ([],[])
-	    and npdl,ls3 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_proced_decla sp p) in (np::r),(s1::rs)) s.procedure_declaration_list ([],[])
-	    in let rs =  T.verifT sp (ls1@ls2@ls3)
-		in let (r,_) = T.tfr_spec rs npl ntdl npdl in r
+	let sp = T.creerT s
+	    in let npl,s1 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) s.process_list ([],sp)
+		in let ntdl,s2 = List.fold_right (fun t -> fun (r,rs) -> let nt,ns = (transform_typed_var_set rs t) in (nt::r),ns) s.type_declaration_list ([],s1)
+		    in let npdl,s3 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_proced_decla rs p) in (np::r),ns) s.procedure_declaration_list ([],s2)
+			in let (r,_) = T.tfr_spec s3 npl ntdl npdl in r
 
 (*      let verif_spec s=
 	let sp = T.creerT
@@ -115,7 +113,7 @@ module type tRef = sig
     type r
     type p 
    
-    val creerRef: r
+    val creerRef: specification -> r
     val getRef: r -> r
     val setRef: r -> p -> r 
     val tstRef: r -> p -> bool
@@ -129,7 +127,7 @@ module IdParam : tRef = struct
     type r = unit
     type p = unit
     
-    let creerRef = ()
+    let creerRef _ = ()
     let getRef _ = ()
     let setRef _ _ = ()
     let tstRef _ _= true
@@ -308,7 +306,7 @@ module Tfr_arith_to_call:tParam  = struct
 	type r = procedure_declaration list
 	type p = procedure_declaration
 	
-	let creerRef = []
+	let creerRef _ = []
 	let getRef r = r
 	let setRef r p = p::r
 	 let tstRef r p = 
@@ -428,8 +426,95 @@ module Tfr_chk_spec:tParam = struct
 		    proc_ref : process;
 		}
 	    type p = unit
-	    let creerRef = 
+	    
+	    let creerRef s = 
 		{
+		    ok = true;
+		    spec = s ;
+			(*{ 
+			    process_list = [] ;
+			    type_declaration_list = [] ;
+			    procedure_declaration_list = [] ;
+			} ;*)
+		    proc_cur = {
+				header = {
+				    process_name = "";
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      };
+		    proc_ref = {
+				header = {
+				    process_name = "";
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      };
+		}
+	    let getRef _ = {
+		    ok = true;
+		    spec =
+			{ 
+			    process_list = [] ;
+			    type_declaration_list = [] ;
+			    procedure_declaration_list = [] ;
+			} ;
+		    proc_cur = {
+				header = {
+				    process_name = "";
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      };
+		    proc_ref = {
+				header = {
+				    process_name = "";
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      };
+		}
+	    let setRef _ _ = {
 		    ok = true;
 		    spec = 
 			{ 
@@ -472,10 +557,50 @@ module Tfr_chk_spec:tParam = struct
 				};
 			      };
 		}
-	    let getRef _ = creerRef
-	    let setRef _ _ = creerRef
 	    let tstRef _ _= true
-	    let verifRef _ _ = creerRef
+	    let verifRef _ _ = {
+		    ok = true;
+		    spec = 
+			{ 
+			    process_list = [] ;
+			    type_declaration_list = [] ;
+			    procedure_declaration_list = [] ;
+			} ;
+		    proc_cur = {
+				header = {
+				    process_name = "";
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      };
+		    proc_ref = {
+				header = {
+				    process_name = "";
+				    signal_declarations =  
+					{
+					    input_signal_list = [];
+					    output_signal_list = [] ;
+					    local_signal_list = [] ;
+					} ;
+				    local_process_list = [];
+				};
+				body = {
+				    assignment_list = [];
+				    constraint_list = [];
+				    instantiation_list = [];
+				};
+			      };
+		}
 	    let getPart _ = ()
 	end
 
@@ -485,8 +610,8 @@ module Tfr_chk_spec:tParam = struct
 	let tR = CsParam.tstRef
 	let vR = CsParam.verifRef
 	
-	(*let tfr_proced_decla s name inp outp =
-	    let list_nom = List.find
+	(*let tfr_proced_decla param name inp outp =
+	    let list_nom = List.find (fun e -> e.procedure_name = nom) param.spec.procedure_declaration_list
 	    let testUnique = if *)
 	
 	(*val tfr_spec:  t -> process list -> typed_variant_set list -> procedure_declaration list -> specification * t*)
