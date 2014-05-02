@@ -1,0 +1,199 @@
+module Tfr_chk_spec:tParam = struct
+
+
+    type ref = {(*ok:bool;*) spec:specification; proc_cur:process list; proc_ref:process;}
+    module CsParam : tRef with type r = ref = struct
+	type r = ref
+	type p = unit
+	
+	let creerRef s = 
+	    let l = List.rev s.process_list 
+	    in let loc = (List.hd l).header.local_process_list 
+		in {
+			spec = s ;
+			proc_cur = loc@l;
+			proc_ref = {
+				    header = {
+					process_name = "";
+					signal_declarations =  
+					    {
+						input_signal_list = [];
+						output_signal_list = [] ;
+						local_signal_list = [] ;
+					    } ;
+					local_process_list = [];
+				    };
+				    body = {
+					assignment_list = [];
+					constraint_list = [];
+					instantiation_list = [];
+				    };
+				  };
+		    }
+	let getRef _ = {
+		spec =
+		    { 
+			process_list = [] ;
+			type_declaration_list = [] ;
+			procedure_declaration_list = [] ;
+		    } ;
+		proc_cur = [];
+		proc_ref = {
+			    header = {
+				process_name = "";
+				signal_declarations =  
+				    {
+					input_signal_list = [];
+					output_signal_list = [] ;
+					local_signal_list = [] ;
+				    } ;
+				local_process_list = [];
+			    };
+			    body = {
+				assignment_list = [];
+				constraint_list = [];
+				instantiation_list = [];
+			    };
+			  };
+	    }
+	let setRef _ _ = {
+		spec = 
+		    { 
+			process_list = [] ;
+			type_declaration_list = [] ;
+			procedure_declaration_list = [] ;
+		    } ;
+		proc_cur = [];
+		proc_ref = {
+			    header = {
+				process_name = "";
+				signal_declarations =  
+				    {
+					input_signal_list = [];
+					output_signal_list = [] ;
+					local_signal_list = [] ;
+				    } ;
+				local_process_list = [];
+			    };
+			    body = {
+				assignment_list = [];
+				constraint_list = [];
+				instantiation_list = [];
+			    };
+			  };
+	    }
+	let tstRef _ _= true
+	let verifRef _ _ = {
+		spec = 
+		    { 
+			process_list = [] ;
+			type_declaration_list = [] ;
+			procedure_declaration_list = [] ;
+		    } ;
+		proc_cur = [];
+		proc_ref = {
+			    header = {
+				process_name = "";
+				signal_declarations =  
+				    {
+					input_signal_list = [];
+					output_signal_list = [] ;
+					local_signal_list = [] ;
+				    } ;
+				local_process_list = [];
+			    };
+			    body = {
+				assignment_list = [];
+				constraint_list = [];
+				instantiation_list = [];
+			    };
+			  };
+	    }
+	let getPart _ = ()
+	
+    end
+
+    include Identite(CsParam)
+    let gR = CsParam.getRef
+    let sR = CsParam.setRef
+    let tR = CsParam.tstRef
+    let vR = CsParam.verifRef
+    
+    
+    let tfr_proced_decla param name inl out =
+	let name_list = List.filter (fun e -> e.procedure_name = name) param.spec.procedure_declaration_list
+	in  if List.length name_list > 1
+	    then raise (Multiple_definition ("Procedure declaration: "^ name))
+	    else if List.exists (fun e -> e.tv_type_name = out) param.spec.type_declaration_list;
+		  then let tst_in = List.fold_left 
+				    (fun r -> fun id -> (List.exists (fun e -> e.tv_type_name = id) param.spec.type_declaration_list) 
+							&& r ) 
+				    true inl
+			in if tst_in  
+			    then ({procedure_name = name; procedure_input_list = inl; procedure_output = out; }, param)
+			    else raise (Undefined ("Procedure declaration in " ^name^": Input type undefind")) 
+		  else raise (Undefined ("Procedure declaration: Output type in " ^name^": "^out^" undefind")) 
+      
+    let tfr_typed_var_set param name vs =
+	if(List.length (List.filter (fun e -> e.tv_type_name = name) param.spec.type_declaration_list) > 1)
+	then raise (Multiple_definition("Typed variant set: "^name^"\n"))
+	else ({tv_type_name = name;variant_set = vs;}, param)
+	
+    let tfr_process param hd bd = 
+	let nproc_cur = if (List.length param.proc_cur) > 1
+			then List.tl param.proc_cur
+			else param.proc_cur
+	in let loc = (List.hd nproc_cur).header.local_process_list
+	    in ({header = hd;body = bd;}, {spec = param.spec; proc_cur = loc@nproc_cur; proc_ref = param.proc_ref;})
+	  
+    let tfr_proc_hd param name sp lpl = (*NE VA PAS ENCORE PARFAITEMENT !!  AVEC LE PROCESS LOCAUX*)
+	let name_list n = List.filter (fun e -> e.header.process_name = n) 
+	in if List.length (name_list name param.spec.process_list)> 1
+	    then raise (Multiple_definition ("Process: "^ name))
+	    else let tst_locp = List.fold_left (fun r -> fun p -> (List.length (name_list p.header.process_name lpl) = 1) && r ) true lpl
+		  in if tst_locp 
+		  then  {process_name = name ;signal_declarations = sp ; local_process_list = lpl;} , param
+		  else raise (Multiple_definition ("Local process in "^name))
+
+    let tfr_sig_declas t inL outL localL =
+	if((List.for_all (fun x -> x.signal_direction = Input) inL)
+		&& (List.for_all (fun x -> x.signal_direction = Output) outL)
+		&& (List.for_all (fun x -> x.signal_direction = Local) localL))
+	then ({input_signal_list = inL;output_signal_list = outL;local_signal_list = localL;}, t)
+	else raise (Incompatible_definitions(" in process "^((List.hd t.proc_cur).header.process_name)^", some signals are record in a list that mismatch with the direction\n"))
+    
+    let tfr_sig_decla param name stype dir =
+	if(List.exists (fun e -> e.tv_type_name = stype) param.spec.type_declaration_list)
+	then if(List.length (List.filter (fun e -> e.signal_name = name)
+		( (List.hd param.proc_cur).header.signal_declarations.input_signal_list@ (List.hd param.proc_cur).header.signal_declarations.output_signal_list
+							@ (List.hd param.proc_cur).header.signal_declarations.local_signal_list )
+		) > 1)
+	      then raise (Multiple_definition("Signal declaration: "^name(*^" in process "^param.proc_cur.header.process_name)*)))
+	      else ({signal_name = name ; signal_type = stype; signal_direction = dir;}, param)
+	else raise (Undefined("Type "^stype(*^" in process "^param.proc_cur.header.process_name^*)^"at the declaration of"^name^"\n"))
+
+	
+    let tfr_inst param ipn ios iie = (*A FINIR*)
+	let tst_proc = List.exists (fun e -> e.header.process_name = ipn) 
+	in if (tst_proc param.spec.process_list) || (tst_proc (List.hd param.proc_cur).header.local_process_list)
+	    then ({ instance_process_name = ipn ; instance_output_signals = ios ; instance_input_expressions = iie ;},param)
+	    else raise (Undefined("Submodule name: "^ipn ))
+	  
+	
+	(*val tfr_spec:  t -> process list -> typed_variant_set list -> procedure_declaration list -> specification * t*)
+	(*val tfr_proced_decla:  t -> Identifier.t -> Identifier.t list -> Identifier.t -> procedure_declaration * t
+	val tfr_process: t -> process_header -> process_body -> process * t
+	val tfr_proc_hd: t -> Identifier.t -> signal_declarations -> process list -> process_header * t
+	val tfr_sig_declas: t -> signal_declaration list -> signal_declaration list -> signal_declaration list -> signal_declarations * t
+	val tfr_proc_bd: t -> assignment list -> sconstraint list -> instantiation list -> process_body * t
+	val tfr_inst: t -> Identifier.t -> Identifier.t list -> signal_expression list -> instantiation * t
+	val tfr_sconstr: t -> sconstraint_kind -> Identifier.t -> Identifier.t -> sconstraint * t
+	val tfr_sconstr_k: t -> sconstraint_kind -> sconstraint_kind * t
+	val tfr_assign: t -> Identifier.t -> signal_expression -> assignment * t
+	val tfr_sig_exp: t -> signal_expression -> signal_expression * t
+	val tfr_sig_decla: t -> Identifier.t -> Identifier.t -> direction -> signal_declaration * t
+	val tfr_direc: t -> direction -> direction * t
+	val tfr_typed_var_set: t -> Identifier.t -> IdentifierSet.t -> typed_variant_set * t
+	val tfr_identifier: t -> Identifier.t -> Identifier.t * t
+	val tfr_identifier_set:  t -> IdentifierSet.t -> IdentifierSet.t * t*)
+end
