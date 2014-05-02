@@ -116,14 +116,11 @@ type ref = {
 	let list_nom = List.find (fun e -> e.procedure_name = nom) param.spec.procedure_declaration_list
 	let testUnique = if *)
 
-	let tfr_process t hd bd = ( {
-		header = hd;
-		body = bd;
-	}, {
-		spec = t.spec;
-		proc_cur = List.tl t.proc_cur;
-		proc_ref = t.proc_ref;
-	})
+	 let tfr_process param hd bd = 
+		let nproc_cur = if (List.length param.proc_cur) > 1
+			then List.tl param.proc_cur
+			else param.proc_cur
+		in ({header = hd;body = bd;}, {spec = param.spec; proc_cur = nproc_cur; proc_ref = param.proc_ref;})
 
 	let tfr_typed_var_set t type_name v =
 	if(List.length (List.filter (fun x -> x.tv_type_name = type_name) t.spec.type_declaration_list) > 1)
