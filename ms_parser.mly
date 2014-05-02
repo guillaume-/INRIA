@@ -53,9 +53,11 @@
 			signal_direction = signal_direction ;
 		  } 
 		in
+		(*
 		let _ = gih_get_type z 
 		and _ = gih_set_signal y signal_declaration 
 		in
+		*)
 		  signal_declaration
 	)
 	typed_signal_list_list
@@ -385,7 +387,6 @@ g_signal_expression :
 			procedure. 
 			I'm actually doing smth simpler, which is to check
 			that the number of parameters correspond. :) 
-		*)
 		let _ = 
 			let procedure = gih_get_procedure (Identifier.of_string $2) in
 			if ((List.length procedure.procedure_input_list) = (List.length $4))
@@ -394,6 +395,7 @@ g_signal_expression :
 				failwith ("Ms_parser:g_signal_expression: "
 						^ "The numbers of formal and actual parameters are not equal.");
 		in
+		*)
 		(* The actual construction of the result. *)
 		FunctionCall((Identifier.of_string $2),$4) 
 	}
