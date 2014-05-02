@@ -166,16 +166,15 @@ g_procedure_definition :
 	  }
 	in
 	  (* Check that the types of the input and output are already defined.
-	  let _ =  gih_get_type (Identifier.of_string $7)
-	  and _ =
-	  *)
-	List.map
-	  ( fun type_name -> gih_get_type type_name )
-	  $4 
-	  in
-	(* Add the new procedure name *)
-	gih_set_procedure (Identifier.of_string $2) procedure_definition ;
-	(* Produce the result *)
+	   *let _ =  gih_get_type (Identifier.of_string $7)
+	   *and _ =
+	   *List.map
+	   *( fun type_name -> gih_get_type type_name )
+	   *$4 
+	   *in
+	   * Add the new procedure name
+	   *gih_set_procedure (Identifier.of_string $2) procedure_definition ;
+	   * Produce the result *)
 	procedure_definition
   }
 ;
