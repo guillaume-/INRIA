@@ -132,8 +132,8 @@ g_specification :
 ;
   
 g_type_definition :
-  Ltype Lidentifier Lsemicolon
-	{
+Ltype Lidentifier Lsemicolon
+{
 	let type_declaration = {
 		tv_type_name = Identifier.of_string $2 ;
 		variant_set = IdentifierSet.empty ;
@@ -141,19 +141,17 @@ g_type_definition :
 		gih_set_type type_declaration.tv_type_name type_declaration ;
 		type_declaration
 	)
-  }
+}
 | Ltype Lidentifier Lequal Lenum Lopen g_nv_identifier_list Lclose Lsemicolon
-  {
-	let type_declaration =
-	{
+{
+	let type_declaration = {
 		tv_type_name = Identifier.of_string $2 ;
 		variant_set = IdentifierSet.from_list $6 ;
 	} in
 	gih_set_type type_declaration.tv_type_name type_declaration;
 	List.iter ( fun enum_variant -> gih_set_enum_variant enum_variant type_declaration) $6;
 	type_declaration
-  }
-;
+};
 
 g_procedure_definition : 
   Lprocedure Lidentifier 
@@ -167,9 +165,10 @@ g_procedure_definition :
 			procedure_output = Identifier.of_string $7 ;
 	  }
 	in
-	  (* Check that the types of the input and output are already defined. *)
+	  (* Check that the types of the input and output are already defined.
 	  let _ =  gih_get_type (Identifier.of_string $7)
 	  and _ =
+	  *)
 	List.map
 	  ( fun type_name -> gih_get_type type_name )
 	  $4 
