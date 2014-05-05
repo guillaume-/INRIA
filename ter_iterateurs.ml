@@ -1,3 +1,4 @@
+open Ter_exception;;
 open Ms_syntax_tree;;
 open SyntaxTree;;
 open Ms_identifier ;;
@@ -77,12 +78,12 @@ module Transformation(T: tParam) = struct
 	    in let (nlsl,s3) = List.fold_right (fun l -> fun (r,rs) -> let nl,ns = (transform_sig_decla rs l) in (nl::r),ns) sds.local_signal_list ([],s2)  
 		in T.tfr_sig_declas s3 nisl nosl nlsl
     
-      let rec transform_process s p = 
-	let nh,s1 = transform_proc_hd s p.header
+      let rec transform_process sa p = 
+	let nh,s1 = transform_proc_hd sa p.header
 	in let nb,s2 = transform_proc_bd s1 p.body
 	    in T.tfr_process s2 nh nb
-      and transform_proc_hd s phd = 
-	let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) phd.local_process_list ([],s)
+      and transform_proc_hd sb phd = 
+	let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) phd.local_process_list ([],sb)
 	in let npn,s2 = transform_id s1 phd.process_name
 	    in let sdn,s3 = transform_sig_declas s2 phd.signal_declarations
 		in T.tfr_proc_hd s3 npn sdn nlpl
@@ -417,202 +418,194 @@ end
 
 module Tfr_chk_spec:tParam = struct
 
-	module CsParam : tRef = struct
-	    type r = 
-		{ 
-		    ok : bool ;
-		    spec : specification ;
-		    proc_cur : process;
-		    proc_ref : process;
-		}
-	    type p = unit
-	    
-	    let creerRef s = 
-		{
-		    ok = true;
-		    spec = s ;
-			(*{ 
-			    process_list = [] ;
-			    type_declaration_list = [] ;
-			    procedure_declaration_list = [] ;
-			} ;*)
-		    proc_cur = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		    proc_ref = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		}
-	    let getRef _ = {
-		    ok = true;
-		    spec =
-			{ 
-			    process_list = [] ;
-			    type_declaration_list = [] ;
-			    procedure_declaration_list = [] ;
-			} ;
-		    proc_cur = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		    proc_ref = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		}
-	    let setRef _ _ = {
-		    ok = true;
-		    spec = 
-			{ 
-			    process_list = [] ;
-			    type_declaration_list = [] ;
-			    procedure_declaration_list = [] ;
-			} ;
-		    proc_cur = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		    proc_ref = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		}
-	    let tstRef _ _= true
-	    let verifRef _ _ = {
-		    ok = true;
-		    spec = 
-			{ 
-			    process_list = [] ;
-			    type_declaration_list = [] ;
-			    procedure_declaration_list = [] ;
-			} ;
-		    proc_cur = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		    proc_ref = {
-				header = {
-				    process_name = "";
-				    signal_declarations =  
-					{
-					    input_signal_list = [];
-					    output_signal_list = [] ;
-					    local_signal_list = [] ;
-					} ;
-				    local_process_list = [];
-				};
-				body = {
-				    assignment_list = [];
-				    constraint_list = [];
-				    instantiation_list = [];
-				};
-			      };
-		}
-	    let getPart _ = ()
-	end
 
-	include Identite(CsParam)
-	let gR = CsParam.getRef
-	let sR = CsParam.setRef
-	let tR = CsParam.tstRef
-	let vR = CsParam.verifRef
+    type ref = {(*ok:bool;*) spec:specification; proc_cur:process list; proc_ref:process;}
+    module CsParam : tRef with type r = ref = struct
+	type r = ref
+	type p = unit
 	
-	(*let tfr_proced_decla param name inp outp =
-	    let list_nom = List.find (fun e -> e.procedure_name = nom) param.spec.procedure_declaration_list
-	    let testUnique = if *)
+	let creerRef s = 
+	    let l = List.rev s.process_list 
+	    in let loc = List.rev (List.hd l).header.local_process_list 
+		in {
+			spec = s ;
+			proc_cur = loc@l;
+			proc_ref = {
+				    header = {
+					process_name = "";
+					signal_declarations =  
+					    {
+						input_signal_list = [];
+						output_signal_list = [] ;
+						local_signal_list = [] ;
+					    } ;
+					local_process_list = [];
+				    };
+				    body = {
+					assignment_list = [];
+					constraint_list = [];
+					instantiation_list = [];
+				    };
+				  };
+		    }
+	let getRef _ = {
+		spec =
+		    { 
+			process_list = [] ;
+			type_declaration_list = [] ;
+			procedure_declaration_list = [] ;
+		    } ;
+		proc_cur = [];
+		proc_ref = {
+			    header = {
+				process_name = "";
+				signal_declarations =  
+				    {
+					input_signal_list = [];
+					output_signal_list = [] ;
+					local_signal_list = [] ;
+				    } ;
+				local_process_list = [];
+			    };
+			    body = {
+				assignment_list = [];
+				constraint_list = [];
+				instantiation_list = [];
+			    };
+			  };
+	    }
+	let setRef _ _ = {
+		spec = 
+		    { 
+			process_list = [] ;
+			type_declaration_list = [] ;
+			procedure_declaration_list = [] ;
+		    } ;
+		proc_cur = [];
+		proc_ref = {
+			    header = {
+				process_name = "";
+				signal_declarations =  
+				    {
+					input_signal_list = [];
+					output_signal_list = [] ;
+					local_signal_list = [] ;
+				    } ;
+				local_process_list = [];
+			    };
+			    body = {
+				assignment_list = [];
+				constraint_list = [];
+				instantiation_list = [];
+			    };
+			  };
+	    }
+	let tstRef _ _= true
+	let verifRef _ _ = {
+		spec = 
+		    { 
+			process_list = [] ;
+			type_declaration_list = [] ;
+			procedure_declaration_list = [] ;
+		    } ;
+		proc_cur = [];
+		proc_ref = {
+			    header = {
+				process_name = "";
+				signal_declarations =  
+				    {
+					input_signal_list = [];
+					output_signal_list = [] ;
+					local_signal_list = [] ;
+				    } ;
+				local_process_list = [];
+			    };
+			    body = {
+				assignment_list = [];
+				constraint_list = [];
+				instantiation_list = [];
+			    };
+			  };
+	    }
+	let getPart _ = ()
+	
+    end
+
+    include Identite(CsParam)
+    let gR = CsParam.getRef
+    let sR = CsParam.setRef
+    let tR = CsParam.tstRef
+    let vR = CsParam.verifRef
+    
+    
+    let tfr_proced_decla param name inl out =
+	let name_list = List.filter (fun e -> e.procedure_name = name) param.spec.procedure_declaration_list
+	in  if List.length name_list > 1
+	    then raise (Multiple_definition ("Procedure declaration: "^ name))
+	    else if List.exists (fun e -> e.tv_type_name = out) param.spec.type_declaration_list;
+		  then let tst_in = List.fold_left 
+				    (fun r -> fun id -> (List.exists (fun e -> e.tv_type_name = id) param.spec.type_declaration_list) 
+							&& r ) 
+				    true inl
+			in if tst_in  
+			    then ({procedure_name = name; procedure_input_list = inl; procedure_output = out; }, param)
+			    else raise (Undefined ("Procedure declaration in " ^name^": Input type undefind")) 
+		  else raise (Undefined ("Procedure declaration: Output type in " ^name^": "^out^" undefind")) 
+      
+    let tfr_typed_var_set param name vs =
+	if(List.length (List.filter (fun e -> e.tv_type_name = name) param.spec.type_declaration_list) > 1)
+	then raise (Multiple_definition("Typed variant set: "^name^"\n"))
+	else ({tv_type_name = name;variant_set = vs;}, param)
+	
+    let tfr_process param hd bd = 
+    print_string("TEST TAILLE: "^(string_of_int (List.length param.proc_cur))^"\n");
+    print_string("NOM PROC CUR : "^(List.hd param.proc_cur).header.process_name^"\n");
+	let nproc_cur,loc = if (List.length param.proc_cur) > 1
+			    then  let n = List.tl param.proc_cur in print_string ("la \n");(n,(List.hd n).header.local_process_list)
+			    else  let n = param.proc_cur in print_string ("ici \n");(n, (List.hd n).header.local_process_list)
+	in if List.exists (fun e -> e = List.hd param.proc_cur) loc 
+	    then ({header = hd;body = bd;}, {spec = param.spec;proc_cur = nproc_cur; proc_ref = param.proc_ref;})
+	    else ({header = hd;body = bd;}, {spec = param.spec; proc_cur = loc@nproc_cur; proc_ref = param.proc_ref;})
+	  
+    let tfr_proc_hd param name sp lpl = 
+	let name_list n = List.filter (fun e -> e.header.process_name = n) 
+	in let test_rest = print_string("NOM : "^ name^"\n");
+	    if List.length (name_list name  param.proc_cur) > 1
+	    then raise (Multiple_definition ("Local process "^name))
+	    else  {process_name = name ;signal_declarations = sp ; local_process_list = lpl;} , param
+	in let lgth_process_list = List.length (name_list name param.spec.process_list) 
+	    in if lgth_process_list > 1
+		then raise (Multiple_definition ("Process: "^ name))
+		else if lgth_process_list = 1 
+		     then if List.find (fun e -> e.header.process_name = name) param.spec.process_list != (List.hd param.proc_cur)
+			  then raise (Multiple_definition ("Process: "^ name))
+			  else test_rest
+		     else test_rest
+ 
+    let tfr_sig_declas t inL outL localL =
+	if((List.for_all (fun x -> x.signal_direction = Input) inL)
+		&& (List.for_all (fun x -> x.signal_direction = Output) outL)
+		&& (List.for_all (fun x -> x.signal_direction = Local) localL))
+	then ({input_signal_list = inL;output_signal_list = outL;local_signal_list = localL;}, t)
+	else raise (Incompatible_definitions(" in process "^((List.hd t.proc_cur).header.process_name)^", some signals are record in a list that mismatch with the direction\n"))
+    
+    let tfr_sig_decla param name stype dir =
+	if(List.exists (fun e -> e.tv_type_name = stype) param.spec.type_declaration_list)
+	then if(List.length (List.filter (fun e -> e.signal_name = name)
+		( (List.hd param.proc_cur).header.signal_declarations.input_signal_list@ (List.hd param.proc_cur).header.signal_declarations.output_signal_list
+							@ (List.hd param.proc_cur).header.signal_declarations.local_signal_list )
+		) > 1)
+	      then raise (Multiple_definition("Signal declaration: "^name(*^" in process "^param.proc_cur.header.process_name)*)))
+	      else ({signal_name = name ; signal_type = stype; signal_direction = dir;}, param)
+	else raise (Undefined("Type "^stype(*^" in process "^param.proc_cur.header.process_name^*)^"at the declaration of"^name^"\n"))
+
+	
+(*    let tfr_inst param ipn ios iie = (*A FINIR*)
+	let tst_proc = List.exists (fun e -> e.header.process_name = ipn) 
+	in if (tst_proc param.spec.process_list) || (tst_proc (List.hd param.proc_cur).header.local_process_list)
+	    then ({ instance_process_name = ipn ; instance_output_signals = ios ; instance_input_expressions = iie ;},param)
+	    else raise (Undefined("Submodule name: "^ipn ))*)
+	  
 	
 	(*val tfr_spec:  t -> process list -> typed_variant_set list -> procedure_declaration list -> specification * t*)
 	(*val tfr_proced_decla:  t -> Identifier.t -> Identifier.t list -> Identifier.t -> procedure_declaration * t
@@ -633,6 +626,6 @@ module Tfr_chk_spec:tParam = struct
 end
 
 let do_transfo prog =
-  let module Trans = (*Identite(IdParam)*) Tfr_arith_to_call
+  let module Trans = (*Identite(IdParam)*) (*Tfr_arith_to_call*) Tfr_chk_spec
   in let module Apply_transfo = Transformation(Trans) 
 	in Apply_transfo.transform_spec prog 
