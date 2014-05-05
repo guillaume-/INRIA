@@ -1,36 +1,40 @@
 type integer;
 type boolean = enum (true, false);
-procedure add(integer, integer) -> integer;
+procedure proc1 (integer) -> integer;
+procedure sub (integer, integer) -> integer;
 
-%TEST%
-process p1 = (
-? integer a;
-! integer b;
+
+
+process G1 = (
+? integer z;
+  integer x;
+! integer y;
 )
-(| b := a
+(
+| y :=  ((2+x) * z) - (3 +x)
+| submodule P3 (y)(z)
 |)
+where process P3 = (
+  ? integer a;
+  ! integer b;
+  )
+  (| b := a
+  |)end;
+  process P0 = (
+  ? integer c;
+  ! integer d;
+  )
+  (| d := c
+  |)end;
 end;
 
-process p2 = (
-? integer i;
-  integer j;
-! integer k;
+process G2 = (
+? integer l;
+  integer m;
+! integer n;
 )
-(| submodule p3(k)(i, j)
- | submodule p1(k)(i)
-|)where process p3 = (
-? integer a, b;
-! integer c;
-)(|c :=  a default b
-|)end;
-end;
-
-process p4 = (
-? integer a, b;
-  integer test;
-! integer c;
-)
-(| c := call add(a + test, b)
- | c := a + b
+(
+| n :=  ((2+m) * l) - (3 +m)
+| n := m
 |)
 end;
