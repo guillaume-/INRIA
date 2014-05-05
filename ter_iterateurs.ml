@@ -101,13 +101,6 @@ module Transformation(T: tParam) = struct
 		    in let npdl,s3 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_proced_decla rs p) in (np::r),ns) s.procedure_declaration_list ([],s2)
 			in let (r,_) = T.tfr_spec s3 npl ntdl npdl in r
 
-(*      let verif_spec s=
-	let sp = T.creerT
-	    in let npl,ls1 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_process sp p) in (np::r),(s1::rs)) s.process_list ([],[])
-	    and ntdl,ls2 = List.fold_right (fun t -> fun (r,rs) -> let nt,s1 = (transform_typed_var_set sp t) in (nt::r),(s1::rs)) s.type_declaration_list ([],[])
-	    and npdl,ls3 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_proced_decla sp p) in (np::r),(s1::rs)) s.procedure_declaration_list ([],[])
-	    in let rs =  T.verifT sp (ls1@ls2@ls3)
-		in let (_,r) = T.tfr_spec rs npl ntdl npdl in r*)
 end
 
 module type tRef = sig
