@@ -1,74 +1,12 @@
-	let rec chk_exp t =
-		let p = try(List.hd t.proc_cur)
-				with Failure(_) -> failwith(" call of a check without process\n")
-		in function
-		| IntegerConstant(i) ->
-			"integer"
-		| EnumVariantAtom(e) ->
-			chk_var t p e
-		| FunctionCall(f, expL) ->
-			chk_procedure t expL f
-		| InAtom(e, ty) ->
-			if(ty.tv_type_name = chk_exp t e)
-			then ty.tv_type_name
-			else raise (Type_mismatch(" with 'in'\n"))
-		| When(e1, e2) ->
-			if((chk_exp t e2) = "boolean")
-			then (chk_exp t e1)
-			else raise (Type_mismatch(" with 'when' : boolean wanted\n"))
-		| AndExp(e1, e2)
-		| OrExp(e1, e2) ->
-			if(((chk_exp t e1) = "boolean")
-			&& (chk_exp t e2) = "boolean")
-			then "boolean"
-			else raise (Type_mismatch(" with 'and', 'or' : boolean wanted\n"))
-		| Plus(e1, e2)
-		| Minus(e1, e2)
-		| Times(e1, e2) ->
-			if(((chk_exp t e1) = "integer")
-			&& (chk_exp t e2) = "integer")
-			then "integer"
-			else raise (Type_mismatch(" with '+', '-', '*' : integer wanted\n"))
-		| WhenAtom(e)
-		| WhenNotAtom(e)
-		| NotAtom(e)
-		| SignalAtom(e) ->
-			chk_sig t p.header.signal_declarations e
-		| ClockPlus(e1, e2)
-		| ClockMinus(e1, e2)
-		| ClockTimes(e1, e2) ->
-			ignore (chk_exp t e1);
-			(chk_exp t e2)
-		| Delay(e1, e2)
-		| Default(e1, e2)
-		| EqualityAtom(e1, e2) ->
-			let t1 = chk_exp t e1 in
-			if(t1 = (chk_exp t e2))
-			then t1
-			else raise (Type_mismatch("\n"))
-	and chk_procedure t expL f =
-		let fdec = List.find (fun x -> x.procedure_name = f) t.spec.procedure_declaration_list
-		in	if(List.for_all2
-						(fun x y -> x = chk_exp t y)
-						fdec.procedure_input_list expL
-			)then fdec.procedure_output
-			else raise (Type_mismatch(" in "^fdec.procedure_name^"\n"))
-	and chk_sig t decs sA =
-		let s = List.find (fun x -> x.signal_name = sA)
-			((decs.input_signal_list
-			@ decs.output_signal_list)
-			@ decs.local_signal_list ) in
-			try s.signal_type
-			with Not_found -> raise (Undefined(" signal "^sA^"\n"))
-	and chk_var t p en =
-		let s = List.find
-					(fun x -> (IdentifierSet.exists (fun y -> y = en) x.variant_set))
-					t.spec.type_declaration_list
-		in  try s.tv_type_name
-			with Not_found -> raise (Undefined(" enum value of "^en^"\n"))
-
-	let tfr_sig_exp t exp = (exp,{
-		spec = t.spec;
-		proc_cur = t.proc_cur;
-		exp_types = (chk_exp t exp)::t.exp_types;
-	})
+	let tfr_assign t sNameO sExpI =
+		let decs = (List.hd t.proc_cur).header.signal_declarations in
+			let s = try List.find
+					(fun x -> x.signal_name = sNameO)
+					(decs.output_signal_list @ decs.local_signal_list)
+					with Not_found -> raise (Undefined(" signal "^sNameO^" in process "^((List.hd t.proc_cur).header.process_name)))
+			in let ty = try(List.hd t.exp_types)
+						with Failure(_) -> raise (Bad_construction("Assignation without expression defined"))
+			in if(ty = s.signal_type)
+			then (	{assigned_signal_name=sNameO; signal_expression=sExpI},
+					{spec=t.spec; proc_cur=t.proc_cur; exp_types=[];})
+			else raise (Type_mismatch("Assignation has Out type "^s.signal_type^", but has for In type "^ty))
