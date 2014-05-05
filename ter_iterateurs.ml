@@ -1,7 +1,7 @@
-open Ter_exception;;
-open Ms_syntax_tree;;
-open SyntaxTree;;
-open Ms_identifier ;;
+open Ms_syntax_tree
+open SyntaxTree
+open Ms_identifier
+open Ter_exception
 
 module type tParam = sig
     type t
@@ -87,7 +87,7 @@ module Transformation(T: tParam) = struct
 	in let npn,s2 = transform_id s1 phd.process_name
 	    in let sdn,s3 = transform_sig_declas s2 phd.signal_declarations
 		in T.tfr_proc_hd s3 npn sdn nlpl
-	
+
      let transform_proced_decla s pd = 
 	let nil,s1 = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_id rs i) in (ni::r),ns) pd.procedure_input_list ([],s)
 	in let npn,s2 = transform_id s1 pd.procedure_name
@@ -100,6 +100,14 @@ module Transformation(T: tParam) = struct
 		in let ntdl,s2 = List.fold_right (fun t -> fun (r,rs) -> let nt,ns = (transform_typed_var_set rs t) in (nt::r),ns) s.type_declaration_list ([],s1)
 		    in let npdl,s3 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_proced_decla rs p) in (np::r),ns) s.procedure_declaration_list ([],s2)
 			in let (r,_) = T.tfr_spec s3 npl ntdl npdl in r
+
+(*      let verif_spec s=
+	let sp = T.creerT
+	    in let npl,ls1 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_process sp p) in (np::r),(s1::rs)) s.process_list ([],[])
+	    and ntdl,ls2 = List.fold_right (fun t -> fun (r,rs) -> let nt,s1 = (transform_typed_var_set sp t) in (nt::r),(s1::rs)) s.type_declaration_list ([],[])
+	    and npdl,ls3 = List.fold_right (fun p -> fun (r,rs) -> let np,s1 = (transform_proced_decla sp p) in (np::r),(s1::rs)) s.procedure_declaration_list ([],[])
+	    in let rs =  T.verifT sp (ls1@ls2@ls3)
+		in let (_,r) = T.tfr_spec rs npl ntdl npdl in r*)
 end
 
 module type tRef = sig
@@ -200,8 +208,8 @@ module Identite(R : tRef):tParam with type t = R.r = struct
     let tfr_identifier_set s is = 
 	let nis = IdentifierSet.fold (fun e -> fun r -> let ne,_ = (tfr_identifier s e) in (IdentifierSet.add ne r)) is IdentifierSet.empty
 	in (nis,s)
-	
-     let tfr_typed_var_set s ttn vs = ({
+
+	let tfr_typed_var_set s ttn vs = ({
 	tv_type_name = ttn;
 	variant_set =vs;
     },s)
@@ -217,9 +225,9 @@ module Identite(R : tRef):tParam with type t = R.r = struct
 		in (NotAtom(ni),s)
 	| WhenNotAtom(i) -> let ni,_ = tfr_identifier s i
 		in (WhenNotAtom(ni),s)
-	
+
 	| IntegerConstant(i) -> (IntegerConstant(i),s)
-	
+
 	| ClockPlus(e1, e2) -> 
 		let ne1, _ = tfr_sig_exp s e1
 		and ne2, _ = tfr_sig_exp s e2
@@ -290,7 +298,7 @@ module Identite(R : tRef):tParam with type t = R.r = struct
 	Input -> (Input,s)
 	| Output -> (Output,s)
 	| Local -> (Local,s)
-    
+
 end
 
 
@@ -298,7 +306,7 @@ module Tfr_arith_to_call:tParam  = struct
     module AtcParam : tRef with type r = procedure_declaration list = struct
 	type r = procedure_declaration list
 	type p = procedure_declaration
-	
+
 	let creerRef _ = []
 	let getRef r = r
 	let setRef r p = p::r
@@ -315,11 +323,11 @@ module Tfr_arith_to_call:tParam  = struct
 					in if tstRef rst t then rst else setRef rst t
 			    in v e
 	  in verif
-	  
+
 	let getPart s =  {procedure_name = s ;
 			  procedure_input_list = ["integer";"integer"] ; 
 			  procedure_output = "integer" ;}
-	
+
     end
     include Identite(AtcParam)
     
@@ -340,11 +348,11 @@ module Tfr_arith_to_call:tParam  = struct
 		and (ne2, s2) = tfr_sig_exp st e2
 		in let rst = vR st (s1::[s2])
 		    in (ne1, ne2, rst)
-		    
+
 	and chk p res = if tR res p
 			then res
 			else sR res p
-			
+
 	in match exp with
 		| Plus(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
 				  in ((FunctionCall("add", [ne1; ne2])),
@@ -364,9 +372,9 @@ module Tfr_arith_to_call:tParam  = struct
 			in (NotAtom(ni),rs)
 		| WhenNotAtom(i) -> let ni,rs = tfr_identifier s i
 			in (WhenNotAtom(ni),rs)
-		
+
 		| IntegerConstant(i) -> (IntegerConstant(i),s)
-		
+
 		| ClockPlus(e1, e2) -> 
 			let (ne1, ne2, rs) = trait s e1 e2
 			in (ClockPlus(ne1, ne2),rs)
@@ -410,64 +418,62 @@ end
 
 module Tfr_chk_spec:tParam = struct
 
+type ref = {
+	spec : specification ;
+	proc_cur : process list;
+	exp_types : Identifier.t list;
+}
 
-    type ref = { spec:specification; proc_cur:process list; exp_types : Identifier.t list}
-   
-    module CsParam : tRef with type r = ref = struct
-	type r = ref
-	type p = unit
-	
-	let creerRef s = 
-	    let l = List.rev s.process_list 
-	    in let loc = List.rev (List.hd l).header.local_process_list 
-		in {
-			spec = s ;
-			proc_cur = loc@l;
+	module CsParam : tRef with type r = ref = struct
+		type r = ref
+		type p = unit
+
+		let creerRef s = 
+			let l = List.rev s.process_list 
+			in let loc = List.rev (List.hd l).header.local_process_list 
+			in {
+				spec = s ;
+				proc_cur = loc@l;
+				exp_types = [];
+		}
+		let getRef _ = {
+			spec = { 
+				process_list = [] ;
+				type_declaration_list = [] ;
+				procedure_declaration_list = [] ;
+			};
+			proc_cur = [];
 			exp_types = [];
-		    }
-	let getRef _ = {
-		spec =
-		    { 
-			process_list = [] ;
-			type_declaration_list = [] ;
-			procedure_declaration_list = [] ;
-		    } ;
-		proc_cur = [];
-		exp_types = [];
-	    }
-	let setRef _ _ = {
-		spec = 
-		    { 
-			process_list = [] ;
-			type_declaration_list = [] ;
-			procedure_declaration_list = [] ;
-		    } ;
-		proc_cur = [];
-		exp_types = [];
-	    }
-	let tstRef _ _= true
-	let verifRef _ _ = {
-		spec = 
-		    { 
-			process_list = [] ;
-			type_declaration_list = [] ;
-			procedure_declaration_list = [] ;
-		    } ;
-		proc_cur = [];
-		exp_types = [];
-	    }
-	let getPart _ = ()
-	
-    end
+		}
+		let setRef _ _ = {
+			spec = { 
+				process_list = [] ;
+				type_declaration_list = [] ;
+				procedure_declaration_list = [] ;
+			};
+			proc_cur = [];
+			exp_types = [];
+		}
+		let tstRef _ _= true
+		let verifRef _ _ =  {
+			spec = { 
+				process_list = [] ;
+				type_declaration_list = [] ;
+				procedure_declaration_list = [] ;
+			};
+			proc_cur = [];
+			exp_types = [];
+		}
+		let getPart _ = ()
+	end
 
-    include Identite(CsParam)
-    let gR = CsParam.getRef
-    let sR = CsParam.setRef
-    let tR = CsParam.tstRef
-    let vR = CsParam.verifRef
-    
-    
-    let tfr_proced_decla param name inl out =
+	include Identite(CsParam)
+	let gR = CsParam.getRef
+	let sR = CsParam.setRef
+	let tR = CsParam.tstRef
+	let vR = CsParam.verifRef
+
+	let tfr_proced_decla param name inl out =
 	let name_list = List.filter (fun e -> e.procedure_name = name) param.spec.procedure_declaration_list
 	in  if List.length name_list > 1
 	    then raise (Multiple_definition ("Procedure declaration: "^ name))
@@ -478,161 +484,194 @@ module Tfr_chk_spec:tParam = struct
 				    true inl
 			in if tst_in  
 			    then ({procedure_name = name; procedure_input_list = inl; procedure_output = out; }, param)
-			    else raise (Undefined ("Procedure declaration in " ^name^": Input type undefind")) 
-		  else raise (Undefined ("Procedure declaration: Output type in " ^name^": "^out^" undefind")) 
+			    else raise (Undefined ("Procedure declaration in " ^name^": Input type undefined")) 
+		  else raise (Undefined ("Procedure declaration: Output type in " ^name^": "^out^" undefined")) 
       
     let tfr_typed_var_set param name vs =
 	if(List.length (List.filter (fun e -> e.tv_type_name = name) param.spec.type_declaration_list) > 1)
-	then raise (Multiple_definition("Typed variant set: "^name^"\n"))
+	then raise (Multiple_definition("Typed variant set: "^name))
 	else ({tv_type_name = name;variant_set = vs;}, param)
-	
-    let tfr_process param hd bd = 
+
+    let tfr_process param hd bd =
 	let nproc_cur,loc = if (List.length param.proc_cur) > 1
-			    then  let n = List.tl param.proc_cur in(n,(List.hd n).header.local_process_list)
-			    else  let n = param.proc_cur in (n, (List.hd n).header.local_process_list)
+			then  let n = List.tl param.proc_cur in (n,(List.hd n).header.local_process_list)
+			else  let n = param.proc_cur in (n, (List.hd n).header.local_process_list)
 	in if List.exists (fun e -> e = List.hd param.proc_cur) loc 
-	    then ({header = hd;body = bd;}, {spec = param.spec;proc_cur = nproc_cur; exp_types = [];})
-	    else ({header = hd;body = bd;}, {spec = param.spec; proc_cur = (List.rev loc)@nproc_cur; exp_types = [];})
-	  
-    let tfr_proc_hd param name sp lpl = 
+		then ({header = hd; body = bd;}, {spec = param.spec; proc_cur = nproc_cur; exp_types = [];})
+		else ({header = hd; body = bd;}, {spec = param.spec; proc_cur = (List.rev loc)@nproc_cur; exp_types = [];})
+
+	let tfr_proc_hd param name sp lpl = 
 	let name_list n = List.filter (fun e -> e.header.process_name = n) 
-	in let test_rest = if List.length (name_list name  param.proc_cur) > 1
-			    then raise (Multiple_definition ("Local process "^name))
-			    else  {process_name = name ;signal_declarations = sp ; local_process_list = lpl;} , param
+	in let test_rest =
+		if List.length (name_list name  param.proc_cur) > 1
+		then raise (Multiple_definition ("Local process "^name))
+		else  {process_name = name; signal_declarations = sp; local_process_list = lpl;}, param
 	in let lgth_process_list = List.length (name_list name param.spec.process_list) 
-	    in if lgth_process_list > 1
+		in if lgth_process_list > 1
 		then raise (Multiple_definition ("Process: "^ name))
 		else if lgth_process_list = 1 
-		     then if List.find (fun e -> e.header.process_name = name) param.spec.process_list != (List.hd param.proc_cur)
-			  then raise (Multiple_definition ("Process: "^ name))
-			  else test_rest
-		     else test_rest
- 
-    let tfr_sig_declas t isl osl losl =
+				then if List.find (fun e -> e.header.process_name = name) param.spec.process_list != (List.hd param.proc_cur)
+					then raise (Multiple_definition ("Process: "^ name))
+					else test_rest
+				else test_rest
+
+	let tfr_sig_declas t isl osl losl =
 	if((List.for_all (fun e -> e.signal_direction = Input) isl)
 		&& (List.for_all (fun e -> e.signal_direction = Output) osl)
 		&& (List.for_all (fun e -> e.signal_direction = Local) losl))
 	then ({input_signal_list = isl;output_signal_list = osl;local_signal_list = losl;}, t)
 	else raise (Incompatible_definitions(" in process "^((List.hd t.proc_cur).header.process_name)^", some signals are record in a list that mismatch with the direction"))
 
-    let tfr_sig_decla param name stype dir =
+	let tfr_sig_decla param sname stype sdir =
 	if(List.exists (fun e -> e.tv_type_name = stype) param.spec.type_declaration_list)
 	then let p_cur_sd = (List.hd param.proc_cur).header.signal_declarations
-	      in let filtre = List.filter (fun e -> e.signal_name = name)
-			      (p_cur_sd.input_signal_list @ p_cur_sd.output_signal_list @ p_cur_sd.local_signal_list)
-		  in if List.length filtre > 1
-		      then raise (Multiple_definition("Signal declaration: "^name))
-		      else ({signal_name = name ; signal_type = stype; signal_direction = dir;}, param)
-	else raise (Undefined("Type "^stype^"at the declaration of"^name))
+		in let filtre = List.filter (fun e -> e.signal_name = sname)
+						(p_cur_sd.input_signal_list @ p_cur_sd.output_signal_list @ p_cur_sd.local_signal_list)
+		in	if List.length filtre > 1
+			then raise (Multiple_definition("Signal declaration: "^sname))
+			else ({signal_name = sname; signal_type = stype; signal_direction = sdir;}, param)
+	else raise (Undefined("Type "^stype^"at the declaration of"^sname))
 
+	let chk_var t p en =
+		let s = try(List.find
+					(fun x -> (IdentifierSet.exists (fun y -> y = en) x.variant_set))
+					t.spec.type_declaration_list
+				)with Not_found -> raise (Undefined(" enum value of "^en))
+		in  s.tv_type_name
 
+	let chk_sig t decs sA =
+		let s = try( List.find (fun x -> x.signal_name = sA)
+						( decs.input_signal_list
+						@ decs.output_signal_list
+						@ decs.local_signal_list )
+				)with Not_found -> (*on adapte l'erreur*)
+					let p = (List.hd t.proc_cur) in
+					try(ignore (chk_var t p sA);
+						raise (Type_mismatch("Signal waited but "^sA^" found as enum"))
+					)with Undefined(_) -> raise (Undefined("Signal "^sA))
+		in s.signal_type
 
-    let tfr_assign param asn ae =
-	let decs = (List.hd param.proc_cur).header.signal_declarations
-	in let s = try List.find (fun e -> e.signal_name = asn) (decs.output_signal_list @ decs.local_signal_list)
-		    with Not_found -> raise (Undefined(" signal "^asn^" in process "^((List.hd param.proc_cur).header.process_name)))
-	    in let ty = try(List.hd param.exp_types)
-			with Failure(_) -> raise (Bad_construction("Assignation without expression defined"))
-	    in if(ty = s.signal_type)
-		then {assigned_signal_name = asn; signal_expression = ae},{spec=param.spec; proc_cur=param.proc_cur; exp_types=[];}
-	    else raise (Type_mismatch("Assignation has Out type "^s.signal_type^", but has for In type "^ty))
-    
-    
-    let tfr_inst param ipn ios iie =
-	let chk_lgth p_sd = (List.length ios = List.length p_sd.output_signal_list)
-			    && (List.length iie = List.length p_sd.input_signal_list)
-	and find_t o = let decs = (List.hd param.proc_cur).header.signal_declarations
-			in let sigs = decs.input_signal_list @ decs.output_signal_list @ decs.local_signal_list
-			    in (List.find (fun e -> e.signal_name = o) sigs ).signal_type
-	in let chk_out_types p_sd_o = List.fold_left2 (fun r -> fun o -> fun s -> (find_t o = s.signal_type) && r) true ios p_sd_o
-	    and chk_in_types p_sd_i = List.fold_left2 (fun r -> fun t -> fun s -> (t = s.signal_type) && r) true param.exp_types p_sd_i
-	    in let chk_in_out p = let pr_sd = p.header.signal_declarations
-				  in if chk_lgth pr_sd 
-				  then if chk_out_types pr_sd.output_signal_list 
-					then if chk_in_types pr_sd.input_signal_list 
-					    then ({ instance_process_name = ipn ; instance_output_signals = ios ; instance_input_expressions = iie ;},
-						{ spec = param.spec ; proc_cur = param.proc_cur; exp_types = []})
-					    else raise (Type_mismatch ("Instance "^ipn^" : input types"))
-					else raise (Type_mismatch ("Instance "^ipn^" : output types"))
-				  else raise (Invalide_argument_numbers ("Instance "^ipn))
-		in let tst_proc = List.exists (fun e -> e.header.process_name = ipn)  
-		    in if (tst_proc param.proc_cur) 
-			then let p_ref = List.find (fun e -> e.header.process_name = ipn) param.proc_cur
-			      in chk_in_out p_ref
-			else if (tst_proc (List.hd param.proc_cur).header.local_process_list)
-			    then let p_ref = List.find (fun e -> e.header.process_name = ipn) (List.hd param.proc_cur).header.local_process_list
-				  in chk_in_out p_ref
-			    else raise (Undefined("Submodule name: "^ipn))
-	    
-    let rec chk_exp t =
-	let p = try(List.hd t.proc_cur)
-		with Failure(_) -> failwith(" call of a check without process")
-	in function
-	    | IntegerConstant(i) -> "integer"
-	    | EnumVariantAtom(e) -> chk_var t p e
-	    | FunctionCall(f, expL) -> chk_procedure t expL f
-	    | InAtom(e, ty) -> 
-		if(ty.tv_type_name = chk_exp t e)
-		then ty.tv_type_name
-		else raise (Type_mismatch(" with 'in'"))
-	    | When(e1, e2) ->
-		if((chk_exp t e2) = "boolean")
-		then (chk_exp t e1)
-		else raise (Type_mismatch(" with 'when' : boolean wanted"))
-	    | AndExp(e1, e2)
-	    | OrExp(e1, e2) ->
-		if ((chk_exp t e1) = "boolean") && (chk_exp t e2) = "boolean"
-		then "boolean"
-		else raise (Type_mismatch(" with 'and', 'or' : boolean wanted"))
-	    | Plus(e1, e2)
-	    | Minus(e1, e2)
-	    | Times(e1, e2) ->
-		if ((chk_exp t e1) = "integer") && (chk_exp t e2) = "integer"
-		then "integer"
-		else raise (Type_mismatch(" with '+', '-', '*' : integer wanted"))
-	    | WhenAtom(e)
-	    | WhenNotAtom(e)
-	    | NotAtom(e)
-	    | SignalAtom(e) -> chk_sig t p.header.signal_declarations e
-	    | ClockPlus(e1, e2)
-	    | ClockMinus(e1, e2)
-	    | ClockTimes(e1, e2) -> ignore (chk_exp t e1); (chk_exp t e2)
-	    | Delay(e1, e2)
-	    | Default(e1, e2)
-	    | EqualityAtom(e1, e2) ->
-		    let t1 = chk_exp t e1 
-		    in if(t1 = (chk_exp t e2))
+	let rec chk_exp t =
+		let p = try(List.hd t.proc_cur)
+				with Failure(_) -> failwith(" call of a check without process")
+		in function
+		| IntegerConstant(i) ->
+			"integer"
+		| EnumVariantAtom(e) ->
+			chk_var t p e
+		| FunctionCall(f, expL) ->
+			chk_procedure t expL f
+		| InAtom(e, ty) ->
+			if(ty.tv_type_name = chk_exp t e)
+			then ty.tv_type_name
+			else raise (Type_mismatch(" with 'in'"))
+		| When(e1, e2) ->
+			if((chk_exp t e2) = "boolean")
+			then (chk_exp t e1)
+			else raise (Type_mismatch(" with 'when' : boolean wanted\n"))
+		| AndExp(e1, e2)
+		| OrExp(e1, e2) ->
+			if(((chk_exp t e1) = "boolean")
+			&& (chk_exp t e2) = "boolean")
+			then "boolean"
+			else raise (Type_mismatch(" with 'and', 'or' : boolean wanted"))
+		| Plus(e1, e2)
+		| Minus(e1, e2)
+		| Times(e1, e2) ->
+			if(((chk_exp t e1) = "integer")
+			&& (chk_exp t e2) = "integer")
+			then "integer"
+			else raise (Type_mismatch(" with '+', '-', '*' : integer wanted"))
+		| WhenAtom(e)
+		| WhenNotAtom(e)
+		| NotAtom(e)
+		| SignalAtom(e) ->
+			chk_sig t p.header.signal_declarations e
+		| ClockPlus(e1, e2)
+		| ClockMinus(e1, e2)
+		| ClockTimes(e1, e2) ->
+			ignore (chk_exp t e1);
+			(chk_exp t e2)
+		| Delay(e1, e2)
+		| Default(e1, e2)
+		| EqualityAtom(e1, e2) ->
+			let t1 = chk_exp t e1 in
+			if(t1 = (chk_exp t e2))
 			then t1
-			else raise (Type_mismatch("Left and right types must be equals with 'delay', 'default' and '='"))
+			else raise (Type_mismatch("Left and right types must be equal in 'delay', 'default' and '='"))
 	and chk_procedure t expL f =
-		let fdec = List.find (fun e -> e.procedure_name = f) t.spec.procedure_declaration_list
-		in try if List.for_all2 (fun e1 e2 -> e1 = chk_exp t e2) fdec.procedure_input_list expL
-		    then fdec.procedure_output
-		    else raise (Type_mismatch(" in "^fdec.procedure_name))
-		   with Not_found -> raise (Undefined("Procedure "^f))
-	and chk_sig t decs sA = 
-		let s = try List.find (fun e -> e.signal_name = sA) (decs.input_signal_list @ decs.output_signal_list @ decs.local_signal_list ) 
-			with Not_found -> raise (Undefined("Signal "^sA))
-		in  s.signal_type    
-	and chk_var t p en =
-		let s = try List.find (fun e -> (IdentifierSet.exists (fun i -> i = en) e.variant_set)) t.spec.type_declaration_list
-			with Not_found -> raise (Undefined("Enum value of "^en))
-		in s.tv_type_name
-			
+		let fdec = List.find (fun x -> x.procedure_name = f) t.spec.procedure_declaration_list
+		in	try(if(List.for_all2
+						(fun x y -> x = chk_exp t y)
+						fdec.procedure_input_list expL
+				)then fdec.procedure_output
+				else raise (Type_mismatch(" in "^fdec.procedure_name))
+			)with Not_found -> raise (Undefined(" procedure "^f))
 
 	let tfr_sig_exp t exp = (exp,{
 		spec = t.spec;
 		proc_cur = t.proc_cur;
 		exp_types = (chk_exp t exp)::t.exp_types;
 	})
+
+	let tfr_assign t sNameO sExpI =
+		let decs = (List.hd t.proc_cur).header.signal_declarations in
+			let s = try List.find
+					(fun x -> x.signal_name = sNameO)
+					(decs.output_signal_list @ decs.local_signal_list)
+					with Not_found -> raise (Undefined(" signal "^sNameO^" in process "^((List.hd t.proc_cur).header.process_name)))
+			in let ty = try(List.hd t.exp_types)
+						with Failure(_) -> raise (Bad_construction("Assignation without expression defined"))
+			in if(ty = s.signal_type)
+			then (	{assigned_signal_name=sNameO; signal_expression=sExpI},
+					{spec=t.spec; proc_cur=t.proc_cur; exp_types=[];})
+			else raise (Type_mismatch("Assignation has Out type "^s.signal_type^", but has for In type "^ty))
+
+	let tfr_sconstr t const_kind sLeft sRight =
+		let d = try (List.hd t.proc_cur).header.signal_declarations
+				with Failure(_) -> raise (Bad_construction("Constraint call but any current process"))
+		in ignore (chk_sig t d sLeft);
+		ignore (chk_sig t d sRight);
+		({	constraint_kind = const_kind;
+			left_signal_name = sLeft;
+			right_signal_name = sRight;
+		}, t)
+
+	let tfr_inst param ipn ios iie =
+		let chk_lgth p_sd = (List.length ios = List.length p_sd.output_signal_list)
+							&& (List.length iie = List.length p_sd.input_signal_list)
+		and find_t o =	let decs = (List.hd param.proc_cur).header.signal_declarations
+		in let sigs = decs.input_signal_list @ decs.output_signal_list @ decs.local_signal_list
+		in (List.find (fun e -> e.signal_name = o) sigs ).signal_type
+		in let chk_out_types p_sd_o =
+			List.fold_left2 (fun r -> fun o -> fun s -> (find_t o = s.signal_type) && r) true ios p_sd_o
+		and chk_in_types p_sd_i = List.fold_left2 (fun r -> fun t -> fun s -> (t = s.signal_type) && r) true param.exp_types p_sd_i
+		in let chk_in_out p = let pr_sd = p.header.signal_declarations
+		in if chk_lgth pr_sd 
+			then if chk_out_types pr_sd.output_signal_list 
+				then if chk_in_types pr_sd.input_signal_list 
+					then ({ instance_process_name = ipn ; instance_output_signals = ios ; instance_input_expressions = iie ;},
+							{ spec = param.spec ; proc_cur = param.proc_cur; exp_types = []})
+					else raise (Type_mismatch ("Instance "^ipn^" : input types"))
+				else raise (Type_mismatch ("Instance "^ipn^" : output types"))
+			else raise (Invalide_argument_numbers ("Instance "^ipn))
+			in let tst_proc = List.exists (fun e -> e.header.process_name = ipn)  
+			in if (tst_proc param.proc_cur) 
+			then	let p_ref = List.find (fun e -> e.header.process_name = ipn) param.proc_cur
+					in chk_in_out p_ref
+			else	if (tst_proc (List.hd param.proc_cur).header.local_process_list)
+					then	let p_ref = List.find (fun e -> e.header.process_name = ipn) (List.hd param.proc_cur).header.local_process_list
+							in chk_in_out p_ref
+					else raise (Undefined("Submodule name: "^ipn))
+
 end
 
-let verif prog =
-  let module Trans =  Tfr_chk_spec
-  in let module Apply_transfo = Transformation(Trans) 
-	in Apply_transfo.transform_spec prog 
-	
-let do_transfo prog =
-  let module Trans = Tfr_arith_to_call 
-  in let module Apply_transfo = Transformation(Trans) 
+let addCall prog =
+	let module Trans = Tfr_arith_to_call
+	in let module Apply_transfo = Transformation(Trans) 
+	in Apply_transfo.transform_spec prog
+
+let check prog =
+	let module Trans = Tfr_chk_spec
+	in let module Apply_transfo = Transformation(Trans) 
 	in Apply_transfo.transform_spec prog 
