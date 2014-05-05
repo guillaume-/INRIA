@@ -419,7 +419,7 @@ end
 module Tfr_chk_spec:tParam = struct
 
 
-    type ref = {(*ok:bool;*) spec:specification; proc_cur:process list; exp_types : Identifier.t list(*proc_ref:process;*)}
+    type ref = {spec:specification; proc_cur:process list; exp_types : Identifier.t list}
     module CsParam : tRef with type r = ref = struct
 	type r = ref
 	type p = unit
@@ -431,23 +431,6 @@ module Tfr_chk_spec:tParam = struct
 			spec = s ;
 			proc_cur = loc@l;
 			exp_types = [];
-			(*proc_ref = {
-				    header = {
-					process_name = "";
-					signal_declarations =  
-					    {
-						input_signal_list = [];
-						output_signal_list = [] ;
-						local_signal_list = [] ;
-					    } ;
-					local_process_list = [];
-				    };
-				    body = {
-					assignment_list = [];
-					constraint_list = [];
-					instantiation_list = [];
-				    };
-				  };*)
 		    }
 	let getRef _ = {
 		spec =
@@ -518,7 +501,7 @@ module Tfr_chk_spec:tParam = struct
 			    else  let n = param.proc_cur in print_string ("ici \n");(n, (List.hd n).header.local_process_list)
 	in if List.exists (fun e -> e = List.hd param.proc_cur) loc 
 	    then ({header = hd;body = bd;}, {spec = param.spec;proc_cur = nproc_cur; exp_types = [];})
-	    else ({header = hd;body = bd;}, {spec = param.spec; proc_cur = loc@nproc_cur; exp_types = [];})
+	    else ({header = hd;body = bd;}, {spec = param.spec; proc_cur = (List.rev loc)@nproc_cur; exp_types = [];})
 	  
     let tfr_proc_hd param name sp lpl = 
 	let name_list n = List.filter (fun e -> e.header.process_name = n) 
@@ -552,8 +535,20 @@ module Tfr_chk_spec:tParam = struct
 		      else ({signal_name = name ; signal_type = stype; signal_direction = dir;}, param)
 	else raise (Undefined("Type "^stype(*^" in process "^param.proc_cur.header.process_name^*)^"at the declaration of"^name))
 
-	
-(*    let tfr_inst param ipn ios iie = 
+
+
+    let tfr_assign param asn ae =
+	let decs = (List.hd param.proc_cur).header.signal_declarations
+	in let s = try List.find (fun e -> e.signal_name = asn) (decs.output_signal_list @ decs.local_signal_list)
+		    with Not_found -> raise (Undefined(" signal "^asn^" in process "^((List.hd param.proc_cur).header.process_name)))
+	    in let ty = try(List.hd param.exp_types)
+			with Failure(_) -> raise (Bad_construction("Assignation without expression defined"))
+	    in if(ty = s.signal_type)
+		then {assigned_signal_name = asn; signal_expression = ae},{spec=param.spec; proc_cur=param.proc_cur; exp_types=[];}
+	    else raise (Type_mismatch("Assignation has Out type "^s.signal_type^", but has for In type "^ty))
+    
+    
+    let tfr_inst param ipn ios iie =
 	let chk_lgth p_sd = (List.length ios = List.length p_sd.output_signal_list)
 			    && (List.length iie = List.length p_sd.input_signal_list)
 	and find_t o = let decs = (List.hd param.proc_cur).header.signal_declarations
@@ -562,13 +557,17 @@ module Tfr_chk_spec:tParam = struct
 	in let chk_out_types p_sd_o = List.fold_left2 (fun r -> fun o -> fun s -> (find_t o = s.signal_type) && r) true ios p_sd_o
 	    and chk_in_types p_sd_i = List.fold_left2 (fun r -> fun t -> fun s -> (t = s.signal_type) && r) true param.exp_types p_sd_i
 	    in let chk_in_out p = let pr_sd = p.header.signal_declarations
-				  in if chk_lgth pr_sd
-				  then if chk_in_types pr_sd.input_signal_list
-					then if chk_out_types pr_sd.output_signal_list
+				  in if chk_lgth pr_sd 
+				  then if chk_out_types pr_sd.output_signal_list 
+					then let truc = 
+					    if chk_in_types pr_sd.input_signal_list 
 					    then ({ instance_process_name = ipn ; instance_output_signals = ios ; instance_input_expressions = iie ;},
 						{ spec = param.spec ; proc_cur = param.proc_cur; exp_types = []})
-					    else raise (Type_mismatch ("Instance "^ipn^" : output types"))
-					else raise (Type_mismatch ("Instance "^ipn^" : input types"))
+					    else raise (Type_mismatch ("Instance "^ipn^" : input types"))
+					    in print_string  ("Taille exp t: "^string_of_int (List.length param.exp_types)^"\n");
+						print_string  ("Taille out: "^string_of_int (List.length pr_sd.input_signal_list)^"\n");
+					    truc
+					else raise (Type_mismatch ("Instance "^ipn^" : output types"))
 				  else raise (Invalide_argument_numbers ("Instance "^ipn))
 		in let tst_proc = List.exists (fun e -> e.header.process_name = ipn)  
 		    in if (tst_proc param.proc_cur) 
@@ -577,7 +576,70 @@ module Tfr_chk_spec:tParam = struct
 			else if (tst_proc (List.hd param.proc_cur).header.local_process_list)
 			    then let p_ref = List.find (fun e -> e.header.process_name = ipn) (List.hd param.proc_cur).header.local_process_list
 				  in chk_in_out p_ref
-			    else raise (Undefined("Submodule name: "^ipn))*)
+			    else raise (Undefined("Submodule name: "^ipn))
+	    
+    let rec chk_exp t =
+	let p = try(List.hd t.proc_cur)
+		with Failure(_) -> failwith(" call of a check without process")
+	in function
+	    | IntegerConstant(i) -> "integer"
+	    | EnumVariantAtom(e) -> chk_var t p e
+	    | FunctionCall(f, expL) -> chk_procedure t expL f
+	    | InAtom(e, ty) -> 
+		if(ty.tv_type_name = chk_exp t e)
+		then ty.tv_type_name
+		else raise (Type_mismatch(" with 'in'"))
+	    | When(e1, e2) ->
+		if((chk_exp t e2) = "boolean")
+		then (chk_exp t e1)
+		else raise (Type_mismatch(" with 'when' : boolean wanted"))
+	    | AndExp(e1, e2)
+	    | OrExp(e1, e2) ->
+		if ((chk_exp t e1) = "boolean") && (chk_exp t e2) = "boolean"
+		then "boolean"
+		else raise (Type_mismatch(" with 'and', 'or' : boolean wanted"))
+	    | Plus(e1, e2)
+	    | Minus(e1, e2)
+	    | Times(e1, e2) ->
+		if ((chk_exp t e1) = "integer") && (chk_exp t e2) = "integer"
+		then "integer"
+		else raise (Type_mismatch(" with '+', '-', '*' : integer wanted"))
+	    | WhenAtom(e)
+	    | WhenNotAtom(e)
+	    | NotAtom(e)
+	    | SignalAtom(e) -> chk_sig t p.header.signal_declarations e
+	    | ClockPlus(e1, e2)
+	    | ClockMinus(e1, e2)
+	    | ClockTimes(e1, e2) -> ignore (chk_exp t e1); (chk_exp t e2)
+	    | Delay(e1, e2)
+	    | Default(e1, e2)
+	    | EqualityAtom(e1, e2) ->
+		    let t1 = chk_exp t e1 
+		    in if(t1 = (chk_exp t e2))
+			then t1
+			else raise (Type_mismatch("Left and right types must be equals with 'delay', 'default' and '='"))
+	and chk_procedure t expL f =
+		let fdec = List.find (fun e -> e.procedure_name = f) t.spec.procedure_declaration_list
+		in try if List.for_all2 (fun e1 e2 -> e1 = chk_exp t e2) fdec.procedure_input_list expL
+		    then fdec.procedure_output
+		    else raise (Type_mismatch(" in "^fdec.procedure_name))
+		   with Not_found -> raise (Undefined("Procedure "^f))
+	and chk_sig t decs sA = print_string("t1\n");
+		let s = try List.find (fun e -> e.signal_name = sA) (decs.input_signal_list @ decs.output_signal_list @ decs.local_signal_list ) 
+			with Not_found -> raise (Undefined("Signal "^sA))
+		in  s.signal_type    
+	and chk_var t p en =print_string("t2\n");
+		let s = try List.find (fun e -> (IdentifierSet.exists (fun i -> i = en) e.variant_set)) t.spec.type_declaration_list
+			with Not_found -> raise (Undefined("Enum value of "^en))
+		in s.tv_type_name
+			
+
+	let tfr_sig_exp t exp = (exp,{
+		spec = t.spec;
+		proc_cur = t.proc_cur;
+		exp_types = (chk_exp t exp)::t.exp_types;
+	})
+
 	  
 	
 	(*val tfr_spec:  t -> process list -> typed_variant_set list -> procedure_declaration list -> specification * t*)
