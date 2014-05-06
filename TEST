@@ -3,43 +3,29 @@ type boolean = enum (true, false);
 procedure proc1 (integer) -> integer;
 procedure sub (integer, integer) -> integer;
 
-process G1 = (
-? integer z;
-! integer y;
+process A = (
+? integer a;
+! integer b;
 )
 (
-| y :=  ((2) * z) - (3 )
-| submodule P3 (y)(z)
+| submodule B(b)(a)
 |)
-where process P3 = (
-  ? integer a;
-  ! integer b;
-  )
-  (| b := a
-   | a ^= b
-   |)end;
-end;
+where
 
-process G2 = (
-? integer i;
-  integer j;
-! integer k;
-)
-(| submodule G1 (k)(j)
-|)
-where process P4 =
-(
-  ? integer u;
-  ! integer v;
-  )
-  (| u := v
-   | v ^= u
-   |)end;
-end;
+	process B = (
+	? integer c;
+	! integer d;
+	)
+	(| d := c
+	|)where
 
-process G3 = (
-? integer r, s;
-! integer t;
-)
-(| submodule G2 (t)(r, s)
-|)end;
+		process C = (
+		? integer e;
+		! integer f;
+		)
+		(| submodule A(f)(e)
+		|)end;
+
+	end;
+
+end;
