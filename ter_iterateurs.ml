@@ -381,13 +381,6 @@ module Tfr_chk_spec:tParam = struct
 	module CsParam : tRef with type r = ref = struct
 	type r = ref
 
-		let rec str_res = function
-			|[] -> ""
-			|p :: l -> p.header.process_name^" "^(str_res l)
-		let rec str_nom = function
-			|[] -> "\n"
-			|n::l -> n^" "^(str_nom l)
-
 	let creerRef s =
 		let rec locaux pr res = (* res rentre valant [] *)
 			let local_pr_list = List.rev pr.header.local_process_list in
@@ -399,21 +392,10 @@ module Tfr_chk_spec:tParam = struct
 			if(List.length p.header.local_process_list) > 0
 			then buildF (List.hd (List.rev p.header.local_process_list)) (p.header.process_name::res)
 			else res
-		in	let _ = print_string("Création des pères et des processus locaux :\n"
-								^"processus locaux = "^(str_res loc)
-								^"\nprocessus courrants = "^(str_res (loc@(List.rev s.process_list)))
-								^"\npères = "^str_nom (buildF (List.hd (List.rev s.process_list)) []))
-		in {spec = s; proc_cur = loc@(List.rev s.process_list); exp_types = []; fathers = buildF (List.hd (List.rev s.process_list)) [];}
+		in	{spec = s; proc_cur = loc@(List.rev s.process_list); exp_types = []; fathers = buildF (List.hd (List.rev s.process_list)) [];}
 	end
 
 	include Identite(CsParam)
-
-	let rec str_res = function
-		|[] -> ""
-		|p :: l -> p.header.process_name^" "^(str_res l)
-	let rec str_nom = function
-		|[] -> "\n"
-		|n::l -> n^" "^(str_nom l)
 
 	let chk_var param p en =
 		let s = try List.find (fun e -> (IdentifierSet.exists (fun y -> y = en) e.variant_set)) param.spec.type_declaration_list
@@ -499,9 +481,6 @@ module Tfr_chk_spec:tParam = struct
 		else ({tv_type_name = name;variant_set = vs;}, param)
 
 	let tfr_process param hd bd =
-		print_string("Fin de "^hd.process_name
-					^"\n ancients currents= "^str_res param.proc_cur
-					^"\n ancients fathers = "^str_nom param.fathers);
 		let rec locals p res addFa =
 			let tmp_res = (List.rev p.header.local_process_list) in
 			if(List.length p.header.local_process_list)>0
@@ -533,12 +512,7 @@ module Tfr_chk_spec:tParam = struct
 									then(param.fathers)
 									else delMultiples(fa@(param.fathers))
 						)with Failure(_) -> fa
-	in	print_string (" nouveaux currents= "^str_res currents
-		^"\n res = "^str_res res
-		^"\n addFa = "^str_nom fa
-		^" nouveaux fathers = "^str_nom fath
-		^"\n");
-		{header=hd; body=bd}, {spec=param.spec; proc_cur=currents; exp_types=[]; fathers=fath}
+	in {header=hd; body=bd}, {spec=param.spec; proc_cur=currents; exp_types=[]; fathers=fath}
 
 	let tfr_proc_hd param name sp lpl =
 		let name_list n = List.filter (fun e -> e.header.process_name = n)
