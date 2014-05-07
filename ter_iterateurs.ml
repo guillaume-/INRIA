@@ -1,7 +1,8 @@
-open Ms_syntax_tree
-open SyntaxTree
-open Ms_identifier
-open Ter_exception
+open Ter_exception;;
+open Ter_util;;
+open Ms_syntax_tree;;
+open SyntaxTree;;
+open Ms_identifier ;;
 
 module type tParam = sig
 	type t
@@ -31,74 +32,73 @@ module Transformation(T: tParam) = struct
 	let transform_id_set s is = T.tfr_identifier_set s is
 
 	let transform_typed_var_set s tvs =  
-	let nttn, s1 = transform_id s tvs.tv_type_name
-	in let nvs, s2 = transform_id_set s1 tvs.variant_set
-		in T.tfr_typed_var_set s2 nttn nvs
+		let nttn, s1 = transform_id s tvs.tv_type_name
+		in let nvs, s2 = transform_id_set s1 tvs.variant_set
+			in T.tfr_typed_var_set s2 nttn nvs
 
 	let transform_direc s d = T.tfr_direc s d
    
 	let transform_sig_decla s sd = 
-	let nsn,s1 = transform_id s sd.signal_name 
-	in let nst,s2 = transform_id s1 sd.signal_type
-		in let nd,s3 = transform_direc s2 sd.signal_direction
-		in T.tfr_sig_decla s3 nsn nst nd
-	  
+		let nsn,s1 = transform_id s sd.signal_name 
+		in let nst,s2 = transform_id s1 sd.signal_type
+			in let nd,s3 = transform_direc s2 sd.signal_direction
+			in T.tfr_sig_decla s3 nsn nst nd
    
 	let transform_sig_exp s e = T.tfr_sig_exp s e
 	
 	let transform_assign s a = 
-	let nasn,s1 = transform_id s a.assigned_signal_name
-	in let nse,s2 = transform_sig_exp s1 a.signal_expression
-		in T.tfr_assign s2 nasn nse
+		let nasn,s1 = transform_id s a.assigned_signal_name
+		in let nse,s2 = transform_sig_exp s1 a.signal_expression
+			in T.tfr_assign s2 nasn nse
 
 	let transform_sconstr_k s sck = T.tfr_sconstr_k s sck
 	
 	let transform_sconstr s sc = 
-	let nck,s1 = transform_sconstr_k s sc.constraint_kind
-	in let nlsn,s2 = transform_id s1 sc.left_signal_name
-		in let nrsn,s3 = transform_id s2 sc.right_signal_name
-		in T.tfr_sconstr s3 nck nlsn nrsn
+		let nck,s1 = transform_sconstr_k s sc.constraint_kind
+		in let nlsn,s2 = transform_id s1 sc.left_signal_name
+			in let nrsn,s3 = transform_id s2 sc.right_signal_name
+			in T.tfr_sconstr s3 nck nlsn nrsn
 	
 	let transform_inst s i = 
-	let niie,s1 = List.fold_right (fun e -> fun (r,rs) -> let ne,ns = (transform_sig_exp rs e) in ((ne::r),ns)) i.instance_input_expressions ([],s)
-	in let (nios,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_id rs o) in ((no::r),ns)) i.instance_output_signals ([],s1)
-		in let nipn,s3 = transform_id s2 i.instance_process_name
-			in T.tfr_inst s3 nipn nios niie
+		let niie,s1 = List.fold_right (fun e -> fun (r,rs) -> let ne,ns = (transform_sig_exp rs e) in ((ne::r),ns)) i.instance_input_expressions ([],s)
+		in let (nios,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_id rs o) in ((no::r),ns)) i.instance_output_signals ([],s1)
+			in let nipn,s3 = transform_id s2 i.instance_process_name
+				in T.tfr_inst s3 nipn nios niie
 
 	let transform_proc_bd s pbd = 
-	let (nal,s1) = List.fold_right (fun a -> fun (r,rs) -> let na,ns = (transform_assign rs a) in (na::r),ns) pbd.assignment_list ([],s)
-	in let (ncl,s2) = List.fold_right (fun c -> fun (r,rs) -> let nc,ns = (transform_sconstr rs c) in (nc::r),ns) pbd.constraint_list ([],s1)
-		in let(nil,s3) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_inst rs i) in (ni::r),ns) pbd.instantiation_list ([],s2)
-		in T.tfr_proc_bd s3 nal ncl nil 
+		let (nal,s1) = List.fold_right (fun a -> fun (r,rs) -> let na,ns = (transform_assign rs a) in (na::r),ns) pbd.assignment_list ([],s)
+		in let (ncl,s2) = List.fold_right (fun c -> fun (r,rs) -> let nc,ns = (transform_sconstr rs c) in (nc::r),ns) pbd.constraint_list ([],s1)
+			in let(nil,s3) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_inst rs i) in (ni::r),ns) pbd.instantiation_list ([],s2)
+			in T.tfr_proc_bd s3 nal ncl nil 
 	
 	let transform_sig_declas s sds = 
-	let (nisl,s1) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_sig_decla rs i) in (ni::r),ns) sds.input_signal_list ([],s)
-	in let (nosl,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_sig_decla rs o) in (no::r),ns) sds.output_signal_list ([],s1) 
-		in let (nlsl,s3) = List.fold_right (fun l -> fun (r,rs) -> let nl,ns = (transform_sig_decla rs l) in (nl::r),ns) sds.local_signal_list ([],s2)  
-		in T.tfr_sig_declas s3 nisl nosl nlsl
+		let (nisl,s1) = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_sig_decla rs i) in (ni::r),ns) sds.input_signal_list ([],s)
+		in let (nosl,s2) = List.fold_right (fun o -> fun (r,rs) -> let no,ns = (transform_sig_decla rs o) in (no::r),ns) sds.output_signal_list ([],s1) 
+			in let (nlsl,s3) = List.fold_right (fun l -> fun (r,rs) -> let nl,ns = (transform_sig_decla rs l) in (nl::r),ns) sds.local_signal_list ([],s2)  
+			in T.tfr_sig_declas s3 nisl nosl nlsl
 	
 	let rec transform_process sa p = 
-	let nh,s1 = transform_proc_hd sa p.header
-	in let nb,s2 = transform_proc_bd s1 p.body
-		in T.tfr_process s2 nh nb
-	  and transform_proc_hd sb phd = 
-	let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) phd.local_process_list ([],sb)
-	in let npn,s2 = transform_id s1 phd.process_name
-		in let sdn,s3 = transform_sig_declas s2 phd.signal_declarations
-		in T.tfr_proc_hd s3 npn sdn nlpl
+		let nh,s1 = transform_proc_hd sa p.header
+		in let nb,s2 = transform_proc_bd s1 p.body
+			in T.tfr_process s2 nh nb
+	and transform_proc_hd sb phd = 
+		let (nlpl,s1) = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) phd.local_process_list ([],sb)
+		in let npn,s2 = transform_id s1 phd.process_name
+			in let sdn,s3 = transform_sig_declas s2 phd.signal_declarations
+			in T.tfr_proc_hd s3 npn sdn nlpl
 
 	let transform_proced_decla s pd = 
-	let nil,s1 = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_id rs i) in (ni::r),ns) pd.procedure_input_list ([],s)
-	in let npn,s2 = transform_id s1 pd.procedure_name
-		in let npo,s3 = transform_id s2 pd.procedure_output
-		in T.tfr_proced_decla s3 npn nil npo
+		let nil,s1 = List.fold_right (fun i -> fun (r,rs) -> let ni,ns = (transform_id rs i) in (ni::r),ns) pd.procedure_input_list ([],s)
+		in let npn,s2 = transform_id s1 pd.procedure_name
+			in let npo,s3 = transform_id s2 pd.procedure_output
+			in T.tfr_proced_decla s3 npn nil npo
  
 	let transform_spec s= 
-	let sp = T.creerT s
-		in let npl,s1 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) s.process_list ([],sp)
-		in let ntdl,s2 = List.fold_right (fun t -> fun (r,rs) -> let nt,ns = (transform_typed_var_set rs t) in (nt::r),ns) s.type_declaration_list ([],s1)
-			in let npdl,s3 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_proced_decla rs p) in (np::r),ns) s.procedure_declaration_list ([],s2)
-			in let (r,_) = T.tfr_spec s3 npl ntdl npdl in r
+		let sp = T.creerT s
+			in let npl,s1 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_process rs p) in (np::r),ns) s.process_list ([],sp)
+			in let ntdl,s2 = List.fold_right (fun t -> fun (r,rs) -> let nt,ns = (transform_typed_var_set rs t) in (nt::r),ns) s.type_declaration_list ([],s1)
+				in let npdl,s3 = List.fold_right (fun p -> fun (r,rs) -> let np,ns = (transform_proced_decla rs p) in (np::r),ns) s.procedure_declaration_list ([],s2)
+				in let (r,_) = T.tfr_spec s3 npl ntdl npdl in r
 end
 
 module type tRef = sig
@@ -115,163 +115,173 @@ module Identite(R : tRef):tParam with type t = R.r = struct
 	type t = R.r 
 	let creerT = R.creerRef
 	
-	let tfr_spec s pl tdl pdl = ({
-	process_list = pl;
-	type_declaration_list = tdl;
-	procedure_declaration_list = pdl;
-	},s)
+	let tfr_spec s pl tdl pdl = 
+		({
+			process_list = pl;
+			type_declaration_list = tdl;
+			procedure_declaration_list = pdl;
+		},s)
 
-	let tfr_proced_decla s pn pi po = ({
-	procedure_name = pn;
-	procedure_input_list = pi;
-	procedure_output = po;
-	},s)
+	let tfr_proced_decla s pn pi po = 
+		({
+			procedure_name = pn;
+			procedure_input_list = pi;
+			procedure_output = po;
+		},s)
 	
-	let tfr_process s ph pb = ({
-	header = ph;
-	body = pb;
-	},s)
+	let tfr_process s ph pb = 
+		({
+			header = ph;
+			body = pb;
+		},s)
 	
-	let tfr_proc_hd s pn sd lpl = ({
-	process_name = pn;
-	signal_declarations = sd;
-	local_process_list = lpl;
-	},s)
-
-	let tfr_sig_declas s isl osl lSl = ({
-	input_signal_list = isl;
-	output_signal_list = osl;
-	local_signal_list = lSl;
-	},s) 
-
-	let tfr_proc_bd s al cl il = ({
-	assignment_list = al ;
-	constraint_list = cl;
-	instantiation_list = il;
-	} ,s)
-
-	let tfr_inst s ipn ios iie = ({
-	instance_process_name = ipn;
-	instance_output_signals = ios;
-	instance_input_expressions = iie;
-	},s) 
-
-	let tfr_sconstr s ck lsn rsn = ({
-	constraint_kind = ck;
-	left_signal_name = lsn;
-	right_signal_name = rsn;
-	},s)
+	let tfr_proc_hd s pn sd lpl = 
+		({
+			process_name = pn;
+			signal_declarations = sd;
+			local_process_list = lpl;
+		},s)
+	
+	let tfr_sig_declas s isl osl lSl = 
+		({
+			input_signal_list = isl;
+			output_signal_list = osl;
+			local_signal_list = lSl;
+		},s) 
+	
+	let tfr_proc_bd s al cl il = 
+		({
+			assignment_list = al ;
+			constraint_list = cl;
+			instantiation_list = il;
+		} ,s)
+	
+	let tfr_inst s ipn ios iie = 
+		({
+			instance_process_name = ipn;
+			instance_output_signals = ios;
+			instance_input_expressions = iie;
+		},s) 
+	
+	let tfr_sconstr s ck lsn rsn = 
+		({
+			constraint_kind = ck;
+			left_signal_name = lsn;
+			right_signal_name = rsn;
+		},s)
 
 	let tfr_sconstr_k s = function
-	ClockEquality -> (ClockEquality,s)
-	| ClockLeq  -> (ClockLeq,s)
-	| ClockLess -> (ClockLess,s)
-	| ClockWhen -> (ClockWhen,s)
-	| ClockWhenNot -> (ClockWhenNot,s)
-	| ClockExclusive -> (ClockExclusive,s)
-
-	let tfr_assign s asn ae = ({
-	assigned_signal_name = asn;
-	signal_expression = ae;
-	},s)
-
+		ClockEquality -> (ClockEquality,s)
+		| ClockLeq  -> (ClockLeq,s)
+		| ClockLess -> (ClockLess,s)
+		| ClockWhen -> (ClockWhen,s)
+		| ClockWhenNot -> (ClockWhenNot,s)
+		| ClockExclusive -> (ClockExclusive,s)
+	
+	let tfr_assign s asn ae = 
+		({
+			assigned_signal_name = asn;
+			signal_expression = ae;
+		},s)
+	
 	let tfr_identifier s i = (i,s)
-
+	
 	let tfr_identifier_set s is = 
-	let nis = IdentifierSet.fold (fun e -> fun r -> let ne,_ = (tfr_identifier s e) in (IdentifierSet.add ne r)) is IdentifierSet.empty
-	in (nis,s)
+		let nis = IdentifierSet.fold (fun e -> fun r -> let ne,_ = (tfr_identifier s e) in (IdentifierSet.add ne r)) is IdentifierSet.empty
+		in (nis,s)
 
-	 let tfr_typed_var_set s ttn vs = ({
-	tv_type_name = ttn;
-	variant_set =vs;
-	},s)
-
+	let tfr_typed_var_set s ttn vs = 
+		({
+			tv_type_name = ttn;
+			variant_set =vs;
+		},s)
+	
 	let rec tfr_sig_exp s = function
-	EnumVariantAtom(i) -> let ni,_ = tfr_identifier s i
-		in (EnumVariantAtom(ni),s)
-	| SignalAtom(i) -> let ni,_ = tfr_identifier s i
-		in (SignalAtom(ni),s)
-	| WhenAtom(i) -> let ni,_ = tfr_identifier s i
-		in (WhenAtom(ni),s)
-	| NotAtom(i) -> let ni,_ = tfr_identifier s i
-		in (NotAtom(ni),s)
-	| WhenNotAtom(i) -> let ni,_ = tfr_identifier s i
-		in (WhenNotAtom(ni),s)
-
-	| IntegerConstant(i) -> (IntegerConstant(i),s)
-
-	| ClockPlus(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (ClockPlus(ne1, ne2),s)
-	| ClockMinus(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (ClockMinus(ne1, ne2),s)
-	| ClockTimes(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (ClockTimes(ne1, ne2),s)
-	| Delay(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (Delay(ne1, ne2),s)
-	| EqualityAtom(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (EqualityAtom(ne1,ne2),s)
-	| Default(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (Default(ne1, ne2),s)
-	| When(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (When(ne1, ne2),s)
-	| AndExp(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (AndExp(ne1, ne2),s)
-	| OrExp(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (OrExp(ne1, ne2),s)
-	| Plus(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (Plus(ne1, ne2),s)
-	| Minus(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in  (Minus(ne1, ne2),s)
-	| Times(e1, e2) -> 
-		let ne1, _ = tfr_sig_exp s e1
-		and ne2, _ = tfr_sig_exp s e2
-		in (Times(ne1, ne2),s)
-	| FunctionCall(i, el) -> 
-		let ni,_ = tfr_identifier s i
-		and nel = List.fold_right (fun e -> fun r -> let (ne,_) = (tfr_sig_exp s e) in (ne::r)) el []
-		in (FunctionCall(ni,nel),s) 
-	| InAtom(e, tvs) ->  
-		let ne,_ = tfr_sig_exp s e
-		and nttn,_ = tfr_identifier s tvs.tv_type_name
-		and nvs,_ = tfr_identifier_set s tvs.variant_set
-		in  let ntvs,_ = tfr_typed_var_set s nttn nvs
-			in (InAtom(ne, ntvs),s)
+		EnumVariantAtom(i) -> let ni,_ = tfr_identifier s i
+			in (EnumVariantAtom(ni),s)
+		| SignalAtom(i) -> let ni,_ = tfr_identifier s i
+			in (SignalAtom(ni),s)
+		| WhenAtom(i) -> let ni,_ = tfr_identifier s i
+			in (WhenAtom(ni),s)
+		| NotAtom(i) -> let ni,_ = tfr_identifier s i
+			in (NotAtom(ni),s)
+		| WhenNotAtom(i) -> let ni,_ = tfr_identifier s i
+			in (WhenNotAtom(ni),s)
+		| IntegerConstant(i) -> (IntegerConstant(i),s)
+		| ClockPlus(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (ClockPlus(ne1, ne2),s)
+		| ClockMinus(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (ClockMinus(ne1, ne2),s)
+		| ClockTimes(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (ClockTimes(ne1, ne2),s)
+		| Delay(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (Delay(ne1, ne2),s)
+		| EqualityAtom(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (EqualityAtom(ne1,ne2),s)
+		| Default(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (Default(ne1, ne2),s)
+		| When(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (When(ne1, ne2),s)
+		| AndExp(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (AndExp(ne1, ne2),s)
+		| OrExp(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (OrExp(ne1, ne2),s)
+		| Plus(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (Plus(ne1, ne2),s)
+		| Minus(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in  (Minus(ne1, ne2),s)
+		| Times(e1, e2) -> 
+			let ne1, _ = tfr_sig_exp s e1
+			and ne2, _ = tfr_sig_exp s e2
+			in (Times(ne1, ne2),s)
+		| FunctionCall(i, el) -> 
+			let ni,_ = tfr_identifier s i
+			and nel = List.fold_right (fun e -> fun r -> let (ne,_) = (tfr_sig_exp s e) in (ne::r)) el []
+			in (FunctionCall(ni,nel),s) 
+		| InAtom(e, tvs) ->  
+			let ne,_ = tfr_sig_exp s e
+			and nttn,_ = tfr_identifier s tvs.tv_type_name
+			and nvs,_ = tfr_identifier_set s tvs.variant_set
+			in  let ntvs,_ = tfr_typed_var_set s nttn nvs
+				in (InAtom(ne, ntvs),s)
 
 	
-	let tfr_sig_decla s sn st sd = ({
-	signal_name = sn;
-	signal_type = st;
-	signal_direction = sd;
-	},s)
+	let tfr_sig_decla s sn st sd =
+		({
+			signal_name = sn;
+			signal_type = st;
+			signal_direction = sd;
+		},s)
 	
 	let tfr_direc s = function
-	Input -> (Input,s)
-	| Output -> (Output,s)
-	| Local -> (Local,s)
+		Input -> (Input,s)
+		| Output -> (Output,s)
+		| Local -> (Local,s)
 	
 end
+
 
 module Tfr_arith_to_call:tParam  = struct
 	module AtcParam : tRef with type r = procedure_declaration list = struct
@@ -284,94 +294,99 @@ module Tfr_arith_to_call:tParam  = struct
 	let sR r p = p::r
 	let tR r p = (List.exists (fun d -> d = p) r)
 	let vR s = let rec verif =function
-		  | [] -> s
-		  | e::l ->  let reste = verif l 
-				in let rec v = function
-				  | [] -> reste
-				  | t::q -> let rst = v q
-						in if tR rst t then rst else sR rst t
-				in v e
-		in verif
-	let gP s = {procedure_name = s ;
+					| [] -> s
+					| e::l ->  let reste = verif l 
+						in let rec v = function
+								| [] -> reste
+								| t::q -> let rst = v q
+											in if tR rst t then rst else sR rst t
+							in v e
+				in verif
+	let gP s = 
+		{procedure_name = s ;
 		procedure_input_list = ["integer";"integer"] ; 
 		procedure_output = "integer" ;}
 		  
 	
-		let tfr_spec s pl tdl pdl = ({
-	process_list = pl;
-	type_declaration_list = tdl;
-	procedure_declaration_list = vR s [pdl];
+	let tfr_spec s pl tdl pdl = 
+		({
+			process_list = pl;
+			type_declaration_list = tdl;
+			procedure_declaration_list = vR s [pdl];
 		},s) 
 
-		let rec tfr_sig_exp (s:t) exp =  
-	let trait st e1 e2 = 
-		let (ne1, s1) = tfr_sig_exp st e1 
-		and (ne2, s2) = tfr_sig_exp st e2
-		in let rst = vR st (s1::[s2])
+	let rec tfr_sig_exp (s:t) exp =  
+		let trait st e1 e2 = 
+			let (ne1, s1) = tfr_sig_exp st e1 
+			and (ne2, s2) = tfr_sig_exp st e2
+			in let rst = vR st (s1::[s2])
 				in (ne1, ne2, rst)
 
-	and chk p res = if tR res p
-			then res
-			else sR res p
+		and chk p res = if tR res p
+				then res
+				else sR res p
 
-	in match exp with
-		| Plus(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
-				  in ((FunctionCall("add", [ne1; ne2])),
-						  (chk (gP "add") rs))
-		| Minus(e1, e2) ->let (ne1, ne2, rs) = trait s e1 e2
-				in  ((FunctionCall("sub", [ne1; ne2])) , (chk (gP "sub") rs))
-		| Times(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
-				in ((FunctionCall("mul", [ne1; ne2])) , (chk (gP "mul") rs))
-		| EnumVariantAtom(i) -> let ni,rs = tfr_identifier s i
-			in (EnumVariantAtom(ni),rs)
-		| SignalAtom(i) -> let ni,rs = tfr_identifier s i
-			in (SignalAtom(ni),rs)
-		| WhenAtom(i) -> let ni,rs = tfr_identifier s i
-			in (WhenAtom(ni),rs)
-		| NotAtom(i) -> let ni,rs = tfr_identifier s i
-			in (NotAtom(ni),rs)
-		| WhenNotAtom(i) -> let ni,rs = tfr_identifier s i
-			in (WhenNotAtom(ni),rs)
-		| IntegerConstant(i) -> (IntegerConstant(i),s)
-		| ClockPlus(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (ClockPlus(ne1, ne2),rs)
-		| ClockMinus(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (ClockMinus(ne1, ne2),rs)
-		| ClockTimes(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (ClockTimes(ne1, ne2),rs)
-		| Delay(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (Delay(ne1, ne2),rs)
-		| EqualityAtom(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (EqualityAtom(ne1,ne2),rs)
-		| Default(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (Default(ne1, ne2),rs)
-		| When(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (When(ne1, ne2),rs)
-		| AndExp(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (AndExp(ne1, ne2),rs)
-		| OrExp(e1, e2) -> 
-			let (ne1, ne2, rs) = trait s e1 e2
-			in (OrExp(ne1, ne2),rs)
-		| FunctionCall(i, el) -> 
-			let ni,s1 = tfr_identifier s i
-			and nel,ls1 = List.fold_right (fun e -> fun (r,rs) -> let (ne,ns) = (tfr_sig_exp s e) in (ne::r),(ns::rs)) el ([],[])
-			in let rs = vR s (s1::ls1)
-			in (FunctionCall(ni,nel),rs) 
-		| InAtom(e, tvs) ->  
-			let ne,s1 = tfr_sig_exp s e
-			and nttn,s2 = tfr_identifier s tvs.tv_type_name
-			and nvs,s3 = tfr_identifier_set s tvs.variant_set
-			in  let ntvs,s4 = tfr_typed_var_set s nttn nvs
-					in let rs = vR s [s1;s2;s3;s4]
-					in (InAtom(ne, ntvs),rs)
+		in match exp with
+			| Plus(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
+					in ((FunctionCall("add", [ne1; ne2])),
+						(chk (gP "add") rs))
+			| Minus(e1, e2) ->let (ne1, ne2, rs) = trait s e1 e2
+					in  ((FunctionCall("sub", [ne1; ne2])) , (chk (gP "sub") rs))
+			| Times(e1, e2) -> let (ne1, ne2, rs) = trait s e1 e2
+					in ((FunctionCall("mul", [ne1; ne2])) , (chk (gP "mul") rs))
+
+			| EnumVariantAtom(i) -> let ni,rs = tfr_identifier s i
+					in (EnumVariantAtom(ni),rs)
+			| SignalAtom(i) -> let ni,rs = tfr_identifier s i
+					in (SignalAtom(ni),rs)
+			| WhenAtom(i) -> let ni,rs = tfr_identifier s i
+					in (WhenAtom(ni),rs)
+			| NotAtom(i) -> let ni,rs = tfr_identifier s i
+					in (NotAtom(ni),rs)
+			| WhenNotAtom(i) -> let ni,rs = tfr_identifier s i
+					in (WhenNotAtom(ni),rs)
+
+			| IntegerConstant(i) -> (IntegerConstant(i),s)
+
+			| ClockPlus(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (ClockPlus(ne1, ne2),rs)
+			| ClockMinus(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (ClockMinus(ne1, ne2),rs)
+			| ClockTimes(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (ClockTimes(ne1, ne2),rs)
+			| Delay(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (Delay(ne1, ne2),rs)
+			| EqualityAtom(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (EqualityAtom(ne1,ne2),rs)
+			| Default(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (Default(ne1, ne2),rs)
+			| When(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (When(ne1, ne2),rs)
+			| AndExp(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (AndExp(ne1, ne2),rs)
+			| OrExp(e1, e2) -> 
+					let (ne1, ne2, rs) = trait s e1 e2
+					in (OrExp(ne1, ne2),rs)
+			| FunctionCall(i, el) -> 
+					let ni,s1 = tfr_identifier s i
+					and nel,ls1 = List.fold_right (fun e -> fun (r,rs) -> let (ne,ns) = (tfr_sig_exp s e) in (ne::r),(ns::rs)) el ([],[])
+					in let rs = vR s (s1::ls1)
+					in (FunctionCall(ni,nel),rs) 
+			| InAtom(e, tvs) ->  
+					let ne,s1 = tfr_sig_exp s e
+					and nttn,s2 = tfr_identifier s tvs.tv_type_name
+					and nvs,s3 = tfr_identifier_set s tvs.variant_set
+					in  let ntvs,s4 = tfr_typed_var_set s nttn nvs
+						in let rs = vR s [s1;s2;s3;s4]
+						in (InAtom(ne, ntvs),rs)
 end
 
 module Tfr_chk_spec:tParam = struct
@@ -607,12 +622,221 @@ module Tfr_chk_spec:tParam = struct
 	let tfr_sig_exp param exp = (exp,{spec = param.spec ; proc_cur = param.proc_cur ; exp_types = (chk_exp param exp)::param.exp_types; fathers = param.fathers})
 end
 
-let addCall prog =
-	let module Trans = Tfr_arith_to_call
-	in let module Apply_transfo = Transformation(Trans) 
-	in Apply_transfo.transform_spec prog
+module Tfr_no_submodule = struct 
+	type modf = {n_sig : signal_declaration list ; n_bdy : process_body ; n_loc : process list}
+	type ref = {spec : specification; proc_cur : process list; modif : modf}
+	
+	module NsParam : tRef with type r = ref = struct
+		type r = ref
 
-let check prog =
-	let module Trans = Tfr_chk_spec
-	in let module Apply_transfo = Transformation(Trans) 
+		let creerRef s = 
+			let l = List.rev s.process_list 
+			in let loc = List.rev (List.hd l).header.local_process_list 
+				in let nb = {assignment_list = [] ; constraint_list = [] ; instantiation_list = []}
+					in let nmod = {n_sig = [] ; n_bdy = nb ; n_loc = []}
+						in {spec = s ; proc_cur = loc@l; modif = nmod ;}
+	end
+	
+	include Identite(NsParam)
+	
+	let tfr_process param ph pb =
+		let nproc_cur = if (List.length param.proc_cur) > 1
+						then List.tl param.proc_cur
+						else param.proc_cur
+		in let loc = (List.hd nproc_cur).header.local_process_list
+			in let dec = ph.signal_declarations
+				and modf = param.modif.n_sig
+				in let nv_decls = {input_signal_list = dec.input_signal_list ;
+									output_signal_list = dec.output_signal_list ;
+									local_signal_list = modf@dec.local_signal_list ;}
+					in let nv_mod = {n_sig = [] ; 
+										n_bdy = {assignment_list = [] ; constraint_list = [] ; instantiation_list = []};
+										n_loc = []}
+							in let tst_preceds = List.fold_left (fun r -> fun p -> 
+																List.exists (fun e -> e = p) loc )
+																true param.proc_cur
+								in if tst_preceds
+									then let nv_hd = {process_name = ph.process_name ; 
+														signal_declarations = nv_decls ; 
+														local_process_list = ph.local_process_list (*[]*) ;} 
+										in ({header = nv_hd ; body = pb;},
+											{spec = param.spec ; proc_cur = nproc_cur; modif = param.modif })
+									else let nv_hd = {process_name = ph.process_name ; 
+												signal_declarations = nv_decls ; 
+												local_process_list = [] ;} 
+										in ({header = nv_hd ; body = pb;},
+											{spec = param.spec ; proc_cur = (List.rev loc)@nproc_cur ; modif = nv_mod })
+						
+
+(**********************************************************************
+	Fonction tfr_inst :
+		- trouve le processus de référence (local ou général)
+		- créé les associations entre :
+				les noms des signaux du process
+			et	les signaux/expressions d'appel de l'instantiation
+		- créé les signaux locaux si necessaire
+			(si existence de sig loc dans le process 
+			ou si expression complexe passée en entrée)
+		- pour chaque contrainte / assignation / instantiation :
+				change le nom de celle ci (partie gauche)
+				TODO : remplace chaque signal par son correspondant
+					dans l'expression (partie droite)
+ **********************************************************************)
+	let tfr_inst param ipn ios iie = 
+		let pcur_h_ploc= (List.hd param.proc_cur).header.local_process_list
+		and declas = (List.hd param.proc_cur).header.signal_declarations
+		(* Fonctions utilitaires :  *)
+		in let rec create_name env debut = 
+					let s = newStr ()
+					in if List.exists (fun e -> e=s) env
+						then create_name env debut
+						else debut^s  (* TODO : verif nom inexistant *)
+		
+			and find_name n li = let _,name = List.find (fun (n1,_) -> n1 = n) li in name
+
+			and gen_loc l env = let name = create_name env "loc_"
+							in (l.signal_name, name),{signal_name = name ; signal_type = l.signal_type ; signal_direction = Local}
+			
+			and create_loc sref exp env = match exp with
+				| EnumVariantAtom(a)
+				| SignalAtom(a) -> ([sref.signal_name, a],[],[])
+				| IntegerConstant(a) -> ([sref.signal_name,string_of_int a],[],[])
+				| _ -> let name = create_name env "sig_"
+						in ([sref.signal_name, name],
+							[{signal_name = name ; signal_type = sref.signal_type ; signal_direction = Local}],
+							[{assigned_signal_name = name ; signal_expression = exp ;}])
+
+			and create_p_loc p env = let n = p.header.process_name
+									in if List.exists (fun pl -> pl.header.process_name = n) pcur_h_ploc
+										then let name = create_name env "Proc_"
+												in let nhd = {process_name = name ; 
+															signal_declarations = p.header.signal_declarations ; 
+															local_process_list = p.header.local_process_list}
+													in (n,name),{header = nhd;
+																body = p.body}
+										else ((n,n),p)
+			
+			and replace_exp env exp = 
+				let rec repl ex =  match ex with
+					| WhenAtom(i) -> WhenAtom(find_name i env)
+					| WhenNotAtom(i) -> WhenNotAtom(find_name i env)
+					| NotAtom(i) -> NotAtom(find_name i env)
+					| SignalAtom(i) -> SignalAtom(find_name i env)
+					| FunctionCall(i,el) -> 
+							let nel = List.map (fun e -> repl e) el
+							in FunctionCall(find_name i env, nel)
+					| InAtom (e, s) -> InAtom (repl e, s)
+					| ClockPlus (e1, e2) -> ClockPlus (repl e1,repl e2)
+					| ClockMinus (e1, e2) -> ClockMinus (repl e1,repl e2)
+					| ClockTimes(e1, e2) -> ClockTimes (repl e1,repl e2)
+					| Delay (e1, e2) -> Delay (repl e1,repl e2)
+					| EqualityAtom (e1, e2) -> EqualityAtom (repl e1,repl e2)
+					| Default (e1, e2) -> Default (repl e1,repl e2)
+					| When (e1, e2) -> When (repl e1,repl e2)
+					| AndExp (e1, e2) -> AndExp (repl e1,repl e2)
+					| OrExp (e1, e2) -> OrExp (repl e1,repl e2)
+					| Plus (e1, e2) -> Plus (repl e1,repl e2)
+					| Minus (e1, e2) -> Minus (repl e1,repl e2)
+					| Times (e1, e2) -> Times (repl e1,repl e2)
+					| _ -> ex (* EnumVariantAtom et IntegerConstant *)
+				in repl exp
+				
+			(* Debut fonction tfr_inst : *)
+			in let find = List.find (fun p -> p.header.process_name = ipn)
+				in let p_ref = try find pcur_h_ploc
+								with Not_found -> try find param.proc_cur
+													with Not_found -> try find param.modif.n_loc
+																		with Not_found -> failwith "ATTENTION, CHECK NON COMPLET !!"
+					in let ref_in = p_ref.header.signal_declarations.input_signal_list 
+						and ref_out = p_ref.header.signal_declarations.output_signal_list
+						and ref_loc = p_ref.header.signal_declarations.local_signal_list 
+						and ref_proc_loc = p_ref.header.local_process_list
+						and ref_assign = p_ref.body.assignment_list 
+						and ref_inst = p_ref.body.instantiation_list
+						and ref_cstr = p_ref.body.constraint_list
+						and env0 = List.map (fun o -> o.signal_name) declas.output_signal_list  
+									@ List.map (fun i -> i.signal_name) declas.input_signal_list 
+									@ List.map (fun l -> l.signal_name) declas.local_signal_list 
+						(* Ordre des associations : reférent,actuel *)
+						in let assoc_name_out = List.fold_left2 (fun r -> fun out_s -> fun out_r ->
+																(out_r.signal_name,out_s)::r)
+																[] ios ref_out
+							and (assoc_name_in,cr_s,cr_a) = List.fold_left2 (fun (ran,rs,ra) -> fun in_e -> fun in_sr -> 
+																		let (nan,ns,na) = create_loc in_sr in_e (env0) in nan@ran,ns@rs,na@ra)
+																		([],[],[]) iie ref_in
+							in let env1 = List.fold_left (fun r -> fun s -> s.signal_name::r) env0 cr_s
+								in let (assoc_name_loc,cr_loc) = List.fold_left (fun (ran,rloc) -> fun loc_s -> 
+																			let (nan,nloc) = gen_loc loc_s (env1) in nan::ran,nloc::rloc ) 
+																			([],[]) ref_loc
+									and env3 = List.map (fun p -> p.header.process_name) pcur_h_ploc
+									in let(assoc_proc_loc, cr_pr) = List.fold_left (fun (rpl,rpc) -> fun p -> 
+																					let (npl,npc) = create_p_loc p (env3) in npl::rpl,npc::rpc)
+																					([],[]) ref_proc_loc
+										in let assoc_name = assoc_name_out @ assoc_name_in @ assoc_name_loc
+											in let nv_a = List.fold_left (fun r -> fun a -> 
+																	{assigned_signal_name = find_name a.assigned_signal_name assoc_name ; 
+																	signal_expression = replace_exp assoc_name a.signal_expression;}::r ) 
+																	[] ref_assign
+												and nv_c = List.fold_left (fun r -> fun c ->
+																		{constraint_kind = c.constraint_kind ; 
+																		left_signal_name = (find_name c.left_signal_name assoc_name) ; 
+																		right_signal_name = (find_name c.right_signal_name assoc_name) ;}::r)
+																		[] ref_cstr
+												and nv_i = List.fold_left (fun r -> fun i ->
+																		{instance_process_name = find_name i.instance_process_name assoc_proc_loc ;
+																		instance_output_signals = List.map (fun o -> find_name o assoc_name) 
+																											i.instance_output_signals;
+																		instance_input_expressions = 
+																				List.fold_left (fun re -> fun e -> (replace_exp assoc_name e)::re) 
+																								[] i.instance_input_expressions;}::r)
+																		[] ref_inst
+							
+							in let nsig = cr_s @ cr_loc @ param.modif.n_sig
+								and n_nv_i = (List.filter (fun i -> i.instance_process_name != ipn )param.modif.n_bdy.instantiation_list) @ nv_i
+								in let nbdy = { assignment_list = cr_a @ nv_a @ param.modif.n_bdy.assignment_list; 
+												constraint_list = nv_c @ param.modif.n_bdy.constraint_list ; 
+												instantiation_list = n_nv_i} 
+									and n_cr_pr = (List.filter (fun p -> p.header.process_name != ipn) param.modif.n_loc ) @ cr_pr
+									in let modf = {n_sig = nsig ; n_bdy = nbdy ; n_loc = n_cr_pr }
+										in let nv_param = {spec = param.spec ; 
+															proc_cur = param.proc_cur; 
+															modif = modf}
+											in ({ instance_process_name = "vide"^ipn;
+												instance_output_signals = ios ;
+												instance_input_expressions = iie ;} , nv_param)
+
+
+	let transform_inst param i = tfr_inst param i.instance_process_name i.instance_output_signals i.instance_input_expressions
+
+
+	let rec tfr_proc_bd param al cl il = 
+		let nal = param.modif.n_bdy.assignment_list@al
+		and ncl = param.modif.n_bdy.constraint_list@cl
+		and nil = param.modif.n_bdy.instantiation_list
+		and nloc = param.modif.n_loc
+		in if nil = []
+			then ({ assignment_list = nal ;
+					constraint_list = ncl ;
+					instantiation_list = nil ;},param) 
+			else 
+				let cur = List.hd param.proc_cur
+				and tl = List.tl param.proc_cur
+				in let n_hd = { process_name = cur.header.process_name ; 
+									signal_declarations = cur.header.signal_declarations ;
+									local_process_list = nloc }
+					in let n_cur = {header = n_hd ; body = cur.body ;}
+						in let npar = {spec = param.spec ; proc_cur = n_cur::tl ; modif = param.modif}
+							in let n_il,n_param = List.fold_right (fun i -> fun (r,rp) -> let ni,np = (transform_inst rp i) in (ni::r),np) nil ([],npar)
+								in tfr_proc_bd n_param nal ncl n_il
+
+end
+
+let verif prog =
+  let module Trans =  Tfr_chk_spec
+  in let module Apply_transfo = Transformation(Trans) 
+	in Apply_transfo.transform_spec prog 
+
+let do_transfo prog =
+  let module Trans = (*Tfr_arith_to_call *)(* Identite(IdParam)*) Tfr_no_submodule
+  in let module Apply_transfo = Transformation(Trans) 
 	in Apply_transfo.transform_spec prog 
