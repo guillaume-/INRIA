@@ -492,16 +492,24 @@ module Tfr_chk_spec:tParam = struct
 		in let noconcat = try((List.hd param.proc_cur)
 							= List.hd ((List.hd (List.tl param.proc_cur)).header.local_process_list)
 						)with _ -> true
+		in let delMultiples li =
+			let rec del res = function
+				|[] -> res
+				|e::l -> if( try(e = List.hd l)
+							 with _ -> false )
+						 then del (e::res) (List.tl l)
+						 else del (e::res) l
+			in del [] (List.rev li)
 		in let currents =	if(noconcat)
 							then (List.tl param.proc_cur)
-							else (res@(List.tl param.proc_cur))
+							else delMultiples(res@(List.tl param.proc_cur))
 		in let fath =	try(if(hd.process_name = (List.hd param.fathers))
 							then	if(noconcat)
 									then(List.tl param.fathers)
-									else(fa@(List.tl param.fathers))
+									else delMultiples(fa@(List.tl param.fathers))
 							else	if(noconcat)
 									then(param.fathers)
-									else(fa@(param.fathers))
+									else delMultiples(fa@(param.fathers))
 						)with Failure(_) -> fa
 	in {header=hd; body=bd}, {spec=param.spec; proc_cur=currents; exp_types=[]; fathers=fath}
 
@@ -567,7 +575,7 @@ module Tfr_chk_spec:tParam = struct
 					 )
 		in if(	not ( List.exists (fun e -> e.header.process_name = ipn) okList
 				or	  List.exists (fun e -> e.header.process_name = ipn) (List.hd param.proc_cur).header.local_process_list))
-		then	raise (Recurrence(ipn^" can not be call here"))
+		then	raise (Incorrect_call(ipn^" can not be call here"))
 		else	
 		let chk_lgth p_sd = (List.length ios = List.length p_sd.output_signal_list)
 							&& (List.length iie = List.length p_sd.input_signal_list)
