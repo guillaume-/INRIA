@@ -1,12 +1,6 @@
-	let tfr_assign t sNameO sExpI =
-		let decs = (List.hd t.proc_cur).header.signal_declarations in
-			let s = try List.find
-					(fun x -> x.signal_name = sNameO)
-					(decs.output_signal_list @ decs.local_signal_list)
-					with Not_found -> raise (Undefined(" signal "^sNameO^" in process "^((List.hd t.proc_cur).header.process_name)))
-			in let ty = try(List.hd t.exp_types)
-						with Failure(_) -> raise (Bad_construction("Assignation without expression defined"))
-			in if(ty = s.signal_type)
-			then (	{assigned_signal_name=sNameO; signal_expression=sExpI},
-					{spec=t.spec; proc_cur=t.proc_cur; exp_types=[];})
-			else raise (Type_mismatch("Assignation has Out type "^s.signal_type^", but has for In type "^ty))
+
+					| FunctionCall(i,el) -> 
+							let nel = List.map (fun e -> repl e) el
+							in if List.exists (fun n -> n.procedure_name = i) param.spec.procedure_declaration_list
+								then FunctionCall(i, nel)
+								else raise (Undefined ("Procedure name "^i))
