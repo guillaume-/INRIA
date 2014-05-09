@@ -821,9 +821,23 @@ module Tfr_no_submodule = struct
 end
 
 let noSub prog =
-  let module Trans = Tfr_no_submodule
-  in let module Apply_transfo = Transformation(Trans) 
-	in Apply_transfo.transform_spec prog 
+	let module Trans = Tfr_no_submodule
+	in let module Apply_transfo = Transformation(Trans) 
+	in let removeLocals p = {
+		header = {
+			process_name = p.header.process_name;
+			signal_declarations = p.header.signal_declarations;
+			local_process_list = [];
+		};
+		body = p.body;
+	}
+	in let oneProcess sp = {
+		process_list = [removeLocals (List.hd(List.rev sp.process_list))];
+		type_declaration_list = sp.type_declaration_list ;
+		procedure_declaration_list = sp.procedure_declaration_list;
+	}
+	in oneProcess (Apply_transfo.transform_spec prog) 
+
 
 let addCall prog =
 	let module Trans = Tfr_arith_to_call
