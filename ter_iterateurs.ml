@@ -610,48 +610,51 @@ end
 
 module Tfr_no_submodule = struct 
 	type modf = {n_sig : signal_declaration list ; n_bdy : process_body ; n_loc : process list}
-	type ref = {spec : specification; proc_cur : process list; modif : modf; (*fathers : Identifier.t list*)}
+	type ref = {spec : specification; proc_cur : process list; modif : modf}
 
 	module NsParam : tRef with type r = ref = struct
 		type r = ref
 
-		let creerRef s = 
-			let l = List.rev s.process_list 
-			in let loc = List.rev (List.hd l).header.local_process_list 
-				in let nb = {assignment_list = [] ; constraint_list = [] ; instantiation_list = []}
-					in let nmod = {n_sig = [] ; n_bdy = nb ; n_loc = []}
-						in {spec = s; proc_cur = loc@l; modif = nmod; (*fathers =TODO*)}
+		let creerRef s =
+		let rec locaux pr res = (* res rentre valant [] *)
+			let local_pr_list = List.rev pr.header.local_process_list in
+			if(List.length local_pr_list > 0)
+			then locaux (List.hd local_pr_list) ((local_pr_list)@res)
+			else res
+		in let loc = locaux (List.hd (List.rev s.process_list)) []
+		in let nb = {assignment_list = [] ; constraint_list = [] ; instantiation_list = []}
+		in let nmod = {n_sig = []; n_bdy = nb; n_loc = []}
+		in {spec = s; proc_cur = loc@(List.rev s.process_list); modif = nmod}
 	end
 
 	include Identite(NsParam)
 
-	let tfr_process param ph pb =
-		let nproc_cur = if (List.length param.proc_cur) > 1
-						then List.tl param.proc_cur
-						else param.proc_cur
-		in let loc = (List.hd nproc_cur).header.local_process_list
-			in let dec = ph.signal_declarations
-				and modf = param.modif.n_sig
-				in let nv_decls = {input_signal_list = dec.input_signal_list ;
-									output_signal_list = dec.output_signal_list ;
-									local_signal_list = modf@dec.local_signal_list ;}
-					in let nv_mod = {n_sig = [] ; 
-										n_bdy = {assignment_list = [] ; constraint_list = [] ; instantiation_list = []};
-										n_loc = []}
-							in let tst_preceds = List.fold_left (fun r -> fun p -> 
-																List.exists (fun e -> e = p) loc )
-																true param.proc_cur
-								in if tst_preceds
-									then let nv_hd = {process_name = ph.process_name ; 
-														signal_declarations = nv_decls ; 
-														local_process_list = ph.local_process_list (*[]*) ;} 
-										in ({header = nv_hd ; body = pb;},
-											{spec = param.spec ; proc_cur = nproc_cur; modif = param.modif })
-									else let nv_hd = {process_name = ph.process_name ; 
-												signal_declarations = nv_decls ; 
-												local_process_list = [] ;} 
-										in ({header = nv_hd ; body = pb;},
-											{spec = param.spec ; proc_cur = (List.rev loc)@nproc_cur ; modif = nv_mod })
+	let tfr_process param hd bd =
+		let rec locals p res =
+			let tmp_res = (List.rev p.header.local_process_list) in
+			if(List.length p.header.local_process_list)>0
+			then	if(List.exists (fun e -> e.header.process_name = p.header.process_name ) tmp_res)
+					then raise (Multiple_definition(" of process "^p.header.process_name^" into itself"))
+					else locals (List.hd tmp_res) (tmp_res@res)
+			else res
+		in let res =	try(locals (List.hd (List.tl param.proc_cur)) [] )
+							with Failure(_) -> []
+		in let noconcat = try((List.hd param.proc_cur)
+							= List.hd ((List.hd (List.tl param.proc_cur)).header.local_process_list)
+						)with _ -> true
+		in let delMultiples li =
+			let rec del res = function
+				|[] -> res
+				|e::l -> if( try(e = List.hd l)
+							 with _ -> false )
+						 then del (e::res) (List.tl l)
+						 else del (e::res) l
+			in del [] (List.rev li)
+		in let currents =	if(noconcat)
+							then (List.tl param.proc_cur)
+							else delMultiples(res@(List.tl param.proc_cur))
+		in  let nv_mod = {n_sig = [] ; n_bdy = {assignment_list = [] ; constraint_list = [] ; instantiation_list = []}; n_loc = []}
+	in {header=hd; body=bd}, {spec=param.spec; proc_cur=currents; modif = nv_mod;}
 
 
 (**********************************************************************
@@ -786,7 +789,7 @@ module Tfr_no_submodule = struct
 									in let modf = {n_sig = nsig ; n_bdy = nbdy ; n_loc = n_cr_pr }
 										in let nv_param = {spec = param.spec ; 
 															proc_cur = param.proc_cur; 
-															modif = modf}
+															modif = modf;}
 											in ({ instance_process_name = "vide"^ipn;
 												instance_output_signals = ios ;
 												instance_input_expressions = iie ;} , nv_param)
@@ -811,7 +814,7 @@ module Tfr_no_submodule = struct
 									signal_declarations = cur.header.signal_declarations ;
 									local_process_list = nloc }
 					in let n_cur = {header = n_hd ; body = cur.body ;}
-						in let npar = {spec = param.spec ; proc_cur = n_cur::tl ; modif = param.modif}
+						in let npar = {spec = param.spec; proc_cur = n_cur::tl; modif = param.modif;}
 							in let n_il,n_param = List.fold_right (fun i -> fun (r,rp) -> let ni,np = (transform_inst rp i) in (ni::r),np) nil ([],npar)
 								in tfr_proc_bd n_param nal ncl n_il
 
