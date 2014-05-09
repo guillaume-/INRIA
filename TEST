@@ -1,74 +1,25 @@
-type integer;
-type boolean = enum (true, false);
-procedure proc1 (integer) -> integer;
-procedure sub (integer, integer) -> integer;
+	let build_currents param ph pb =
+		let rec locals p res newStat =
+			let tmp_res = (List.rev p.header.local_process_list) 
+			in if (List.length p.header.local_process_list)>0
+				then locals (List.hd tmp_res) (tmp_res@res) false
+				else res, newStat
+		in let res, newState =	try(locals (List.hd (List.tl param.proc_cur)) [] true)
+								with Failure(_) -> [], true
+			in let noconcat = try((List.hd param.proc_cur)
+								= List.hd ((List.hd (List.tl param.proc_cur)).header.local_process_list))
+								with _ -> true
+				in let delMultiples li =
+						let rec del res = function
+							|[] -> res
+							|e::l -> if( try(e = List.hd l)
+										with _ -> false )
+									then del (e::res) (List.tl l)
+									else del (e::res) l
+						in del [] (List.rev li)
+					in if (noconcat)
+						then (List.tl param.proc_cur), newState
+						else delMultiples(res@(List.tl param.proc_cur)), newState
 
-process Z = (
-? integer x;
-! integer y;
-)(|y:=x
-|)end;
-
-process A = (
-? integer a;
-! integer b;
-)
-(| submodule B (b)(a)
-|)where
-	process B = (
-	? integer c;
-	! integer d;
-	)
-	(| d := c
-	|)end;
-end;
-
-process D = (
-? integer a;
-! integer b;
-)
-(| submodule A (b)(a+1)
- | submodule C (b)(a)
- | submodule Z (b)(a)
- | submodule B (b)(a)
-|)where
-	process B = (
-	? integer c;
-	! integer d;
-	)
-	(| submodule E(d)(c)
-	|)where
-		process E = (
-		? integer e;
-		! integer f;
-		)
-		(| f := e
-		|)end;
-	end;
-	process C = (
-		? integer l;
-		! integer u;
-	)(| submodule F (u)(l)
-	  | submodule U (u)(l)
-	|)where
-		process F = (
-		? integer e;
-		! integer f;
-		)
-		(| f := e
-		|)
-		end;
-		process U = (
-		? integer s;
-		! integer t;
-		)
-		(| submodule Test(t)(s)
-		|)where process Test = (
-		? integer i;
-		! integer j;
-		)
-		(| j := i
-		|)end;
-		end;
-	end;
-end;
+	let tfr_process param ph pb = 
+		let nproc_cur, newStat = build_currents param ph pb
