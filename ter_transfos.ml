@@ -3,12 +3,12 @@ open Ter_identite
 open Ter_arith_to_call
 open Ter_no_submod
 open Ter_chk_spec
+open Ter_schemas_latex
 
 let noSub prog =
 	let module Trans = Tfr_no_submodule
 	in let module Apply_transfo = Transformation(Trans) 
 		in (Apply_transfo.transform_spec prog) 
-
 
 let addCall prog =
 	let module Trans = Tfr_arith_to_call
@@ -19,3 +19,8 @@ let check prog =
 	let module Trans = Tfr_chk_spec
 	in let module Apply_transfo = Transformation(Trans) 
 		in Apply_transfo.transform_spec prog 
+
+let schemas prog =
+	let module Trans = Ter_schemas_latex
+	in let module Apply_transfo = Transformation(Trans) 
+		in let p = Apply_transfo.get_param prog in p.res
