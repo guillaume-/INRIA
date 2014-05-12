@@ -4,46 +4,104 @@ open Ms_identifier
 open Ter_exception
 open Ter_util
 open Ter_iterateurs
+open Ter_identite
 
-module Tfr_schemas_latex:tParam  = struct
-	type position{
-		x: int;
-		y: int;
-	}
-	type str_hd = {
-		name: string;
-		v_in: (string, position) list;
-		v_out: (string, position) list;
-		(*v_local: (string, position) list;*)
-		loc_proc: (string, position) list;
-	}
-	type str_bd = {
-		assign = (string, position) list;
-		instant = (string, position) list;
-		constr = (string, position) list;
-	}
-	type str_proc = {s_bd: str_bd, s_hd: str_hd}
-	type ref = {spec: specification; (*proc_cur: process list;*) s: (str_proc, position) list}
+	type ref = {res: string; origine:(int*int); pro_content: string; fathers: (string list) list;}
 
 	module SlParam : tRef with type r = ref = struct
 		type r = ref
-
-		let creerRef s =
-		(*
-		let rec locaux pr res =
-			let local_pr_list = List.rev pr.header.local_process_list in
-			if(List.length local_pr_list > 0)
-			then locaux (List.hd local_pr_list) ((local_pr_list)@res)
-			else res
-		in let loc = locaux (List.hd (List.rev s.process_list)) []
-		*)
-		in {spec = s; (*proc_cur = loc@(List.rev s.process_list);*)[];}
+		let creerRef s = print_string "check 0\n";
+			let init_fathers =
+				let rec build_f = 
+					let rec listStr fathers = function
+						|[] -> []
+						|e::l ->	if(List.length e.header.local_process_list) > 0
+									then (listStr (e.header.process_name::fathers) (List.rev e.header.local_process_list))
+										@(listStr fathers l)
+									else fathers::(listStr fathers l)
+					in function
+					|[] -> []
+					|e::l -> if(List.length e.header.local_process_list) > 0
+							 then (listStr [e.header.process_name] (List.rev e.header.local_process_list))@([] ::(build_f l))
+							 else ([]::(build_f l))
+				in build_f (List.rev s.process_list)
+			in	{res="\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage[french]{babel}\n\\usepackage{tikz}\n\\usetikzlibrary{calc}\n\n\\begin{document}\n\\begin{center}\n\n"
+						; origine=(0,0)
+						; pro_content = ""
+						; fathers = init_fathers}
 	end
 
 	include Identite(SlParam)
 
+	let tfr_spec struc pl tdl pdl = {
+		process_list = pl;
+		type_declaration_list = tdl;
+		procedure_declaration_list = pdl
+	
+	}, {
+		res = (struc.res ^ "\n\\end{center}\n\\end{document}\n");
+		origine = (0, 0);
+		pro_content = "";
+		fathers = [];
+	}
 
+	let tfr_process struc ph pb = print_string "check process 0\n";
+		let rec str_fathers = function
+			|[] -> ""
+			|e::[] -> e
+			|e::l -> e^" local de "^(str_fathers l)
+		in let str_p = "\\\\\n"
+					^ph.process_name
+					^(if(
+						try(List.length (List.hd struc.fathers) > 0)
+						with _ -> false )
+					  then " process local de "^(str_fathers (List.hd struc.fathers)) 
+					  else "")
+					^"\\\\\n\\begin{tikzpicture}[scale=0.5]\n"
+					^struc.pro_content
+					^"\\end{tikzpicture}\n"
+		in
+	{ body = pb;
+	  header = ph;
+	}, {
+	  res = (struc.res ^ str_p);
+	  origine = (0, 0);
+	  pro_content = "";
+	  fathers = try List.tl struc.fathers
+				with _ -> [];
+	}
 
+(*
+	let tfr_sig_exp struc = function
+		| EnumVariantAtom(i)
+		| IntegerConstant(i)
+		| SignalAtom(i) ->
+			
+		| WhenAtom(i)
+		| WhenNotAtom(i) ->
+
+		
+		| NotAtom(i) ->
+
+		| FunctionCall(i,el) ->
+
+		| InAtom (e, s) ->
+
+		| ClockPlus (e1, e2)
+		| ClockMinus (e1, e2)
+		| ClockTimes(e1, e2)
+		| Delay (e1, e2)
+		| EqualityAtom (e1, e2)
+		| Default (e1, e2)
+		| When (e1, e2)
+		| AndExp (e1, e2)
+		| OrExp (e1, e2)
+		| Plus (e1, e2)
+		| Minus (e1, e2)
+		| Times (e1, e2) -> 
+*)
+
+(*
 	val tfr_proced_decla:  t -> Identifier.t -> Identifier.t list -> Identifier.t -> procedure_declaration * t
 	val tfr_process: t -> process_header -> process_body -> process * t
 	val tfr_proc_hd: t -> Identifier.t -> signal_declarations -> process list -> process_header * t
@@ -59,4 +117,4 @@ module Tfr_schemas_latex:tParam  = struct
 	val tfr_typed_var_set: t -> Identifier.t -> IdentifierSet.t -> typed_variant_set * t
 	val tfr_identifier: t -> Identifier.t -> Identifier.t * t
 	val tfr_identifier_set:  t -> IdentifierSet.t -> IdentifierSet.t * t
-end
+*)
