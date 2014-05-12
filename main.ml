@@ -11,15 +11,11 @@ let spec_0 = print_string "----------------------- Lecture ficher --------------
 			in print_string "------------------ Verification syntaxique -------------------\n";
 				check (s);;
 
+let spec_1 = print_string "-- Remplacement symboles arithmétiques -> appels procedures --\n";
+			addCall spec_0;;
 
-
-(*let spec_1 = print_string "-- Remplacement symboles arithmétiques -> appels procedures --\n";
-			addCall spec_0;;*)
-			
 let spec_2 = print_string "----------------- Suppression des submodules -----------------\n";
-			noSub spec_0;;
-			
-(*let spec_3 = check spec_2;;*)
-			
+			noSub spec_1;;
+
 let str = Ter_toString.str_specification spec_2;;
 print_string str;
