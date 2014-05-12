@@ -197,10 +197,6 @@ module Tfr_chk_spec:tParam = struct
 			({constraint_kind = const_kind; left_signal_name = sLeft; right_signal_name = sRight;}, param)
 
 	let tfr_inst param ipn ios iie =
-		let rec str_fathers = function
-			|[] -> "\n"
-			|f::l -> f ^" "^(str_fathers l)
-		in
 		let okList = (List.filter
 						(fun e -> not(List.exists (fun x -> x=e.header.process_name) param.fathers))
 						(List.tl param.proc_cur)
