@@ -7,9 +7,11 @@ open Ter_iterateurs
 open Ter_identite
 
 	type point = {x: int; y: int; nom: string;}
-	type boite = {ox: int; oy: int; nom: string;}
-	type tex_struct = {pointsIn: point list; pointsOut: point list; boite: boite;}
-	type ref = {res: string; origine:(int*int); pro_content: tex_struct list; fathers: (string list) list;}
+	type boite = {x1: int; y1: int; x2 : int ; y2 : int ; nom: string;}
+	type extern = { pointIn : point list ; pointOut : point list ; pointLoc : (point*bool) list}
+	type intern = {pointIn : point list ; pointOut : point list ; boite: boite;}
+	
+	type ref = {res: string; util: intern list; gen: extern list; fathers: (string list) list;}
 
 	module SlParam : tRef with type r = ref = struct
 		type r = ref
@@ -29,8 +31,8 @@ open Ter_identite
 							 else ([]::(build_f l))
 				in build_f (List.rev s.process_list)
 			in	{res="\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage[french]{babel}\n\\usepackage{tikz}\n\\usetikzlibrary{calc}\n\n\\begin{document}\n\\begin{center}\n\n"
-						; origine=(0,0)
-						; pro_content = []
+						; util = []
+						; gen = []
 						; fathers = init_fathers}
 	end
 
@@ -40,11 +42,11 @@ open Ter_identite
 		process_list = pl;
 		type_declaration_list = tdl;
 		procedure_declaration_list = pdl
-	
+
 	}, {
 		res = (struc.res ^ "\n\\end{center}\n\\end{document}\n");
-		origine = (0, 0);
-		pro_content = [];
+		util = []; 
+		gen = [] ;
 		fathers = [];
 	}
 
@@ -67,12 +69,21 @@ open Ter_identite
 	{ body = pb;
 	  header = ph;
 	}, {
-	  res = (struc.res ^ str_p);
-	  origine = (0, 0);
-	  pro_content = [];
-	  fathers = try List.tl struc.fathers
+		res = (struc.res ^ str_p);
+		util = []; 
+		gen = [] ;
+		fathers = try List.tl struc.fathers
 				with _ -> [];
 	}
+	
+(*	let create_box inl outl name =
+		let max_length = max (List.length inl) (List.length outl)
+		in let h = max_length * 2 + 1
+		in let box = {x1 = ; 
+					y1 = ; 
+					x2 = ; 
+					y2 = ; 
+					nom = name;}*)
 
 (*
 	let tfr_sig_exp struc = function
