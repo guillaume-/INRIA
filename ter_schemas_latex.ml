@@ -6,11 +6,14 @@ open Ter_util
 open Ter_iterateurs
 open Ter_identite
 
-	type ref = {res: string; origine:(int*int); pro_content: string; fathers: (string list) list;}
+	type point = {x: int; y: int; nom: string;}
+	type boite = {ox: int; oy: int; nom: string;}
+	type tex_struct = {pointsIn: point list; pointsOut: point list; boite: boite;}
+	type ref = {res: string; origine:(int*int); pro_content: tex_struct list; fathers: (string list) list;}
 
 	module SlParam : tRef with type r = ref = struct
 		type r = ref
-		let creerRef s = print_string "check 0\n";
+		let creerRef s =
 			let init_fathers =
 				let rec build_f = 
 					let rec listStr fathers = function
@@ -22,12 +25,12 @@ open Ter_identite
 					in function
 					|[] -> []
 					|e::l -> if(List.length e.header.local_process_list) > 0
-							 then (listStr [e.header.process_name] (List.rev e.header.local_process_list))@([] ::(build_f l))
+							 then (listStr [e.header.process_name] (List.rev e.header.local_process_list))@(build_f l)
 							 else ([]::(build_f l))
 				in build_f (List.rev s.process_list)
 			in	{res="\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage[french]{babel}\n\\usepackage{tikz}\n\\usetikzlibrary{calc}\n\n\\begin{document}\n\\begin{center}\n\n"
 						; origine=(0,0)
-						; pro_content = ""
+						; pro_content = []
 						; fathers = init_fathers}
 	end
 
@@ -41,24 +44,24 @@ open Ter_identite
 	}, {
 		res = (struc.res ^ "\n\\end{center}\n\\end{document}\n");
 		origine = (0, 0);
-		pro_content = "";
+		pro_content = [];
 		fathers = [];
 	}
 
-	let tfr_process struc ph pb = print_string "check process 0\n";
+	let tfr_process struc ph pb =
 		let rec str_fathers = function
 			|[] -> ""
 			|e::[] -> e
 			|e::l -> e^" local de "^(str_fathers l)
-		in let str_p = "\\\\\n"
-					^ph.process_name
+		in let str_p =
+				ph.process_name
 					^(if(
-						try(List.length (List.hd struc.fathers) > 0)
+						try(List.length (List.rev (List.hd struc.fathers)) > 0)
 						with _ -> false )
 					  then " process local de "^(str_fathers (List.hd struc.fathers)) 
 					  else "")
 					^"\\\\\n\\begin{tikzpicture}[scale=0.5]\n"
-					^struc.pro_content
+(* 					^struc.pro_content *)
 					^"\\end{tikzpicture}\n"
 		in
 	{ body = pb;
@@ -66,7 +69,7 @@ open Ter_identite
 	}, {
 	  res = (struc.res ^ str_p);
 	  origine = (0, 0);
-	  pro_content = "";
+	  pro_content = [];
 	  fathers = try List.tl struc.fathers
 				with _ -> [];
 	}
