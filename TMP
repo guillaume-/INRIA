@@ -1,9 +1,7 @@
-			let init_fathers =
-				let rec build_f fathers = function
-					|[] -> []
-					|e::l -> if(List.length e.header.local_process_list) > 0
-							 then	(build_f (e.header.process_name::fathers) (List.rev e.header.local_process_list))
-									@[fathers]
-									@(build_f fathers l)
-							 else (fathers::(build_f fathers l))
-				in build_f [] (List.rev s.process_list)
+type point = {x: float; y: float; name: string;}
+	let p_vide = {x = 0.; y = 0.; name = "";}
+	type boite = {x1: float; y1: float; x2 : float ; y2 : float ; nom: string;}
+	let b_vide = {x1 = 0.; y1 = 0.; x2 = 0.; y2  = 0.; nom = "";}
+	type extern = { pointIn : point list ; pointOut : point list ; pointLoc : (point*bool) list ; cadre : boite}
+	let e_vide = { pointIn = [] ; pointOut = [] ; pointLoc = [] ; cadre = b_vide}
+	type intern = {pointIn : point list ; pointOut : point list ; boite: boite;}
