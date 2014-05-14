@@ -9,16 +9,24 @@ open Ter_identite
 	type variable = {vname: string; vpos: float}
 	type out_point= {ox: float; oy: float; oname: string;}
 	type in_point = {ix: float; iy: float; iname: string;}
-	type b = {	inL: in_point list;
+	type b = { inL: (in_point*boite) list;
 				(*	outL :
 					Si boite != Empty, out_point est une entrée de la boite
 					tel que dans boite.inL il existe in_point.iname = out_point.oname
 				*)
 				outL: (out_point*boite) list;
 				nom: string;
-				taille: (float*float);
+				taille: float;
 	}
-	and boite = |Empty |B of b |Unique of variable
+	and boite = |Empty |B of b(* |Unique of variable*)
+	let size = function
+		|Empty -> 0.
+		|B(b) -> b.taille
+	
+	let name = function 
+		|Empty -> "vide"
+		|B(b) -> b.nom
+	
 	type ref = {	res: string;
 					fathers: (string list) list;
 					tmp_expr: (signal_expression*boite)list;
@@ -87,15 +95,12 @@ open Ter_identite
 					^"\\\\\n\\begin{tikzpicture}[scale=0.5]\n"
   					^calc_str struc
 					^"\\end{tikzpicture}\n\\\\"
-		in
-	{ body = pb;
-	  header = ph;
-	}, {
-		res = (struc.res ^ str_p);
-		fathers = (try List.tl struc.fathers with _ -> []);
-		tmp_expr = []; instances = []; assigns = [];
-		v_in=[]; v_out=[]; v_new=[]
-	}
+		in { body = pb;
+			header = ph;}, 
+			{res = (struc.res ^ str_p);
+			fathers = (try List.tl struc.fathers with _ -> []);
+			tmp_expr = []; instances = []; assigns = [];
+			v_in=[]; v_out=[]; v_new=[]}
 
 (*
 	let tfr_sig_exp struc = function
@@ -127,30 +132,70 @@ open Ter_identite
 		| Times (e1, e2) -> 
 *)
 
-let tfr_sig_declas struc ins outs locs =
-	let fmax = if(List.length ins)>(List.length outs)
-			  then float_of_int (List.length ins)
-			  else float_of_int (List.length outs)
-	in let rec ininit pos = function
-		|[] -> []
-		|e::l -> {vname=e.signal_name; vpos=pos}::(ininit (pos -. 1.) l)
-	in let rec outinit pos = function
-		|[] -> []
-		|e::l -> {vname=e.signal_name; vpos=pos}::(outinit (pos -. 1.) l)
-	in {
-	input_signal_list = ins;
-	output_signal_list = outs;
-	local_signal_list = locs;
-}, {res = struc.res;
-	fathers = struc.fathers;
-	tmp_expr=[];
-	instances=[];
-	assigns=[];
-	v_in = ininit (fmax -. 0.5) ins;
-	v_out = outinit (fmax -. 0.5) outs;
-	v_new=[];
-}
+	let tfr_sig_declas struc ins outs locs =
+		let fmax = if(List.length ins)>(List.length outs)
+				then float_of_int (List.length ins)
+				else float_of_int (List.length outs)
+		in let rec ininit pos = function
+			|[] -> []
+			|e::l -> {vname=e.signal_name; vpos=pos}::(ininit (pos -. 1.) l)
+		in let rec outinit pos = function
+			|[] -> []
+			|e::l -> {vname=e.signal_name; vpos=pos}::(outinit (pos -. 1.) l)
+		in {input_signal_list = ins;
+			output_signal_list = outs;
+			local_signal_list = locs;}, 
+			{res = struc.res;
+			fathers = struc.fathers;
+			tmp_expr=[];
+			instances=[];
+			assigns=[];
+			v_in = ininit (fmax -. 0.5) ins;
+			v_out = outinit (fmax -. 0.5) outs;
+			v_new=[];}
 
+	let tfr_assign struc asn ae = 
+		let tmp_expr,b = List.hd struc.tmp_expr
+		in let n,taille_b = name b, size b
+			in let n_assign = B ({inL = [{ix = taille_b -. 1.; iy = 0.; iname = n;},b];
+									(* outL existe forcément déjà dans v_out ou v_new et est par conseq déjà positionné quelque part.
+									Donc zéro comme position*)
+									outL = [{ox = 0.; oy = 0.; oname = asn},Empty];
+									nom  = ":=";
+									taille = taille_b ;})
+				in let n_struc = { res = struc.res;
+									fathers = struc.fathers;
+									tmp_expr = [];
+									instances = struc.instances;
+									assigns = n_assign::struc.assigns;
+									v_in = struc.v_in;
+									v_out = struc.v_out;
+									v_new = struc.v_new;} 
+					in {assigned_signal_name = asn;signal_expression=ae}, n_struc
+	
+	let tfr_inst struc ipn ios iie =
+		let hauteur = (float (max (List.length ios) (List.length iie))) /. 2.
+		and taille_b = List.fold_left (fun r -> fun (e,b) -> let t = size b in if t > r then t else r) 0. struc.tmp_expr
+		in let _,outl = List.fold_right (fun e -> fun (h,r) -> 
+										(h-.1., ({ox = taille_b +. 2.; oy = h; oname = e},Empty)::r)) 
+										ios ((hauteur -. 0.5),[]) 
+			and _,inl = List.fold_right (fun (e,b) -> fun (h,r) ->
+										(h-.1., ({ix = taille_b +. 1. ; iy = h ; iname = "void" ;},b)::r))
+										struc.tmp_expr ((hauteur -. 0.5),[]) 
+			in let n_inst = B({inL = inl;
+								outL = outl;
+								nom  = ipn;
+								taille = taille_b +. 2.;})
+				in let n_struc = { res = struc.res;
+									fathers = struc.fathers;
+									tmp_expr = [];
+									instances = n_inst::struc.instances;
+									assigns = struc.assigns;
+									v_in = struc.v_in;
+									v_out = struc.v_out;
+									v_new = struc.v_new;} 
+					in {instance_process_name = ipn ; instance_output_signals = ios ; instance_input_expressions = iie ;},
+						n_struc
 (*
 	val tfr_proced_decla:  t -> Identifier.t -> Identifier.t list -> Identifier.t -> procedure_declaration * t
 	val tfr_process: t -> process_header -> process_body -> process * t
