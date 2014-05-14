@@ -6,34 +6,56 @@ open Ter_util
 open Ter_iterateurs
 open Ter_identite
 
-	type point = {x: int; y: int; nom: string;}
-	type boite = {x1: int; y1: int; x2 : int ; y2 : int ; nom: string;}
-	type extern = { pointIn : point list ; pointOut : point list ; pointLoc : (point*bool) list}
-	type intern = {pointIn : point list ; pointOut : point list ; boite: boite;}
-	
-	type ref = {res: string; util: intern list; gen: extern list; fathers: (string list) list;}
+	type variable = {vname: string; vpos: float}
+	type out_point= {ox: float; oy: float; oname: string;}
+	type in_point = {ix: float; iy: float; iname: string;}
+	type b = {	inL: in_point list;
+				(*	outL :
+					Si boite != Empty, out_point est une entrée de la boite
+					tel que dans boite.inL il existe in_point.iname = out_point.oname
+				*)
+				outL: (out_point*boite) list;
+				nom: string;
+				taille: (float*float);
+	}
+	and boite = |Empty |B of b |Unique of variable
+	type ref = {	res: string;
+					fathers: (string list) list;
+					tmp_expr: (signal_expression*boite)list;
+					instances: boite list;
+					assigns: boite list;
+					v_in: variable list;
+					v_out: variable list;
+					v_new: variable list;
+				}
 
 	module SlParam : tRef with type r = ref = struct
 		type r = ref
 		let creerRef s =
 			let init_fathers =
-				let rec build_f = 
-					let rec listStr fathers = function
-						|[] -> []
-						|e::l ->	if(List.length e.header.local_process_list) > 0
-									then (listStr (e.header.process_name::fathers) (List.rev e.header.local_process_list))
-										@(listStr fathers l)
-									else fathers::(listStr fathers l)
-					in function
+				let rec build_f fathers = function
 					|[] -> []
 					|e::l -> if(List.length e.header.local_process_list) > 0
-							 then (listStr [e.header.process_name] (List.rev e.header.local_process_list))@(build_f l)
-							 else ([]::(build_f l))
-				in build_f (List.rev s.process_list)
-			in	{res="\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage[french]{babel}\n\\usepackage{tikz}\n\\usetikzlibrary{calc}\n\n\\begin{document}\n\\begin{center}\n\n"
-						; util = []
-						; gen = []
-						; fathers = init_fathers}
+							 then	(build_f (e.header.process_name::fathers) (List.rev e.header.local_process_list))
+									@[fathers]
+									@(build_f fathers l)
+							 else (fathers::(build_f fathers l))
+				in build_f [] (List.rev s.process_list)
+			in	{res="\\documentclass{article}\n"
+					^"\\usepackage[utf8]{inputenc}\n"
+					^"\\usepackage[T1]{fontenc}\n"
+					^"\\usepackage[french]{babel}\n"
+					^"\\usepackage{tikz}\n"
+					^"\\usetikzlibrary{calc}\n\n"
+					^"\\begin{document}\n"
+					^"\\begin{center}\n\n";
+				fathers=init_fathers; 
+				tmp_expr=[];
+				instances=[];
+				assigns=[];
+				v_in=[];
+				v_out=[];
+				v_new=[];}
 	end
 
 	include Identite(SlParam)
@@ -42,16 +64,16 @@ open Ter_identite
 		process_list = pl;
 		type_declaration_list = tdl;
 		procedure_declaration_list = pdl
-
 	}, {
 		res = (struc.res ^ "\n\\end{center}\n\\end{document}\n");
-		util = []; 
-		gen = [] ;
 		fathers = [];
+		tmp_expr = []; instances = []; assigns = [];
+		v_in=[]; v_out=[]; v_new=[];
 	}
 
 	let tfr_process struc ph pb =
-		let rec str_fathers = function
+		let calc_str struc = ""
+		in let rec str_fathers = function
 			|[] -> ""
 			|e::[] -> e
 			|e::l -> e^" local de "^(str_fathers l)
@@ -63,27 +85,17 @@ open Ter_identite
 					  then " process local de "^(str_fathers (List.hd struc.fathers)) 
 					  else "")
 					^"\\\\\n\\begin{tikzpicture}[scale=0.5]\n"
-(* 					^struc.pro_content *)
-					^"\\end{tikzpicture}\n"
+  					^calc_str struc
+					^"\\end{tikzpicture}\n\\\\"
 		in
 	{ body = pb;
 	  header = ph;
 	}, {
 		res = (struc.res ^ str_p);
-		util = []; 
-		gen = [] ;
-		fathers = try List.tl struc.fathers
-				with _ -> [];
+		fathers = (try List.tl struc.fathers with _ -> []);
+		tmp_expr = []; instances = []; assigns = [];
+		v_in=[]; v_out=[]; v_new=[]
 	}
-	
-(*	let create_box inl outl name =
-		let max_length = max (List.length inl) (List.length outl)
-		in let h = max_length * 2 + 1
-		in let box = {x1 = ; 
-					y1 = ; 
-					x2 = ; 
-					y2 = ; 
-					nom = name;}*)
 
 (*
 	let tfr_sig_exp struc = function
@@ -114,6 +126,30 @@ open Ter_identite
 		| Minus (e1, e2)
 		| Times (e1, e2) -> 
 *)
+
+let tfr_sig_declas struc ins outs locs =
+	let fmax = if(List.length ins)>(List.length outs)
+			  then float_of_int (List.length ins)
+			  else float_of_int (List.length outs)
+	in let rec ininit pos = function
+		|[] -> []
+		|e::l -> {vname=e.signal_name; vpos=pos}::(ininit (pos -. 1.) l)
+	in let rec outinit pos = function
+		|[] -> []
+		|e::l -> {vname=e.signal_name; vpos=pos}::(outinit (pos -. 1.) l)
+	in {
+	input_signal_list = ins;
+	output_signal_list = outs;
+	local_signal_list = locs;
+}, {res = struc.res;
+	fathers = struc.fathers;
+	tmp_expr=[];
+	instances=[];
+	assigns=[];
+	v_in = ininit (fmax -. 0.5) ins;
+	v_out = outinit (fmax -. 0.5) outs;
+	v_new=[];
+}
 
 (*
 	val tfr_proced_decla:  t -> Identifier.t -> Identifier.t list -> Identifier.t -> procedure_declaration * t
