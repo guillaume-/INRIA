@@ -30,15 +30,15 @@ et on exécute via ./main < fichier_signal
 ---------------
 -----Nouveaux fichiers
 ---------------
---
+
 ter_arith_to_call.ml
 	définit la fonction qui, à partir d'une specification, 
 	retourne une specification où toute fonction + devient un call add
 --
---
+
 ter_chk_spec.ml
 	définit la fonction qui vérifie une spécification
---
+
 --
 ter_exception.ml
 	définit l'ensemble des exceptions utilisées dans le reste du programme
