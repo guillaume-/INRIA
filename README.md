@@ -66,4 +66,3 @@ ter_transfos.ml
 
 ter_util.ml
 	définit des fonctions utilitaires
---
