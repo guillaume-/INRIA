@@ -145,14 +145,26 @@ module Tfr_chk_spec:tParam = struct
 						)with Failure(_) -> fa
 	in {header=hd; body=bd}, {spec=param.spec; proc_cur=currents; exp_types=[]; fathers=fath}
 
+	let tfr_proc_bd param assigns sconstraints instantiations =
+		let rec no_multiple_out_use = function
+			|[] -> true
+			|e::l ->if(List.exists (fun x -> x.assigned_signal_name = e.assigned_signal_name) l)
+					then false
+					else no_multiple_out_use l
+		in if(no_multiple_out_use assigns)
+		then {  assignment_list=assigns;
+				constraint_list=sconstraints;
+				instantiation_list=instantiations;
+		}, param
+		else raise (Multiple_definition(" for an output signal value"))
+
 	let tfr_proc_hd param name sp lpl =
 		let name_list n = List.filter (fun e -> e.header.process_name = n)
 		in let test_rest =
 					if List.length (name_list name  param.proc_cur) > 1
 					then raise (Multiple_definition ("Local process "^name))
 					else {process_name = name; signal_declarations = sp; local_process_list = lpl;}, param
-		in let lgth_process_list = List.length (name_list name param.spec.process_list) 
-		in	if lgth_process_list > 1
+		in let lgth_process_list = List.length (name_list name param.spec.process_list)in	if lgth_process_list > 1
 			then raise (Multiple_definition ("Process: "^ name))
 			else	if lgth_process_list = 1 
 					then	if List.find (fun e -> e.header.process_name = name) param.spec.process_list != (List.hd param.proc_cur)
