@@ -1,38 +1,8 @@
-fathers : (string list) list;
-
-	module SdParam : tRef with type r = ref = struct
-		type r = ref
-		let creerRef s =
-			let init_fathers =
-				let rec build_f fathers = function
-					|[] -> []
-					|e::l -> if(List.length e.header.local_process_list) > 0
-							 then	(build_f (e.header.process_name::fathers) (List.rev e.header.local_process_list))
-									@[fathers]
-									@(build_f fathers l)
-							 else (fathers::(build_f fathers l))
-				in build_f [] (List.rev s.process_list)
-			in {res = "" ; fathers=init_fathers; l1 = [] ; l2 = [] ; l3 = [] ; l4 = [] ; b = "" ; e = "" ; decl = "" ; lab = "","" ; box = false}
-	end
-
-
-
-
-
-	let tfr_proc_hd param pn sd lpl =
-		let rec print_pname pn = function
-			|[] -> pn
-			|e::l -> print_pname (e^"->"^pn) l
-		in ({process_name = pn ; signal_declarations = sd ; local_process_list = lpl;},
-		{ res =  param.res; fathers = param.fathers;
-			l1 = param.l1 ; l2 = param.l2 ; l3 = param.l3 ; l4 = param.l4 ;
-			b = "digraph "^print_pname pn (List.hd param.fathers)^"{\n"^
-				"\tgraph [rankdir = LR];\n"^
-				"\tnode [shape=record, style=filled];\n"^
-				"\tcenter = true \n\n"
-				^ param.decl;
-			e = "\nlabelloc = \"t\";\n" ^
-				"label = \"process : "^ pn ^"\"\n"^
-				"}\n\n" ;
-			decl = "" ; lab = "","";
-			box = false})
+	let tfr_process param ph pb =
+		({header = ph; body = pb;},
+			{ res = param.b^param.decl^param.e ^"\n"^ param.res;
+				fathers = (try List.tl param.fathers with _ -> []);
+				l1 = [] ; l2 = [] ; l3 = [] ; l4 = [];
+				b = "" ; e = "" ;
+				decl = "" ; lab = "","";
+				box = false})
