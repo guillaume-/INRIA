@@ -20,7 +20,7 @@
 	let tfr_proc_hd param pn sd lpl =
 		let rec print_pname pn = function
 			|[] -> pn
-			|e::l -> print_pname (pn^e) l
+			|e::l -> print_pname (e^"->"^pn) l
 		in ({process_name = pn ; signal_declarations = sd ; local_process_list = lpl;},
 		{ res =  param.res; fathers = param.fathers;
 			l1 = param.l1 ; l2 = param.l2 ; l3 = param.l3 ; l4 = param.l4 ;
