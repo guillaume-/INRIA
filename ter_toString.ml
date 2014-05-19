@@ -1,6 +1,6 @@
-open Ms_identifier;;
-open Ms_syntax_tree;;
-open SyntaxTree ;;
+open Ms_identifier
+open Ms_syntax_tree
+open SyntaxTree
 
 let str_id = Identifier.of_string
 let rec str_id_list = function
@@ -56,6 +56,29 @@ and str_signal_expression =  function
 	| Plus(e1,e2) ->   "(" ^(str_signal_expression e1) ^ ") + (" ^ (str_signal_expression e2) ^ ")"
 	| Minus(e1,e2) ->   "(" ^(str_signal_expression e1) ^ ") - (" ^ (str_signal_expression e2) ^ ")"
 	| Times(e1,e2) ->   "(" ^(str_signal_expression e1) ^ ") * (" ^ (str_signal_expression e2) ^ ")"
+;;
+
+let str_sig_exp =  function
+	| EnumVariantAtom(i) -> str_id i
+	| SignalAtom(i) -> str_id i
+	| ClockPlus(e1, e2) -> (str_signal_expression e1)^"ClPl"^(str_signal_expression e2)
+	| ClockMinus(e1, e2) -> (str_signal_expression e1)^"ClMi"^(str_signal_expression e2)
+	| ClockTimes(e1, e2) -> (str_signal_expression e1)^"ClTi"^(str_signal_expression e2)
+	| Delay(e1, e2) -> (str_signal_expression e1)^"Init"^(str_signal_expression e2)
+	| EqualityAtom(e1, e2) -> (str_signal_expression e1)^"Eq"^(str_signal_expression e2)
+	| InAtom(e, s)-> (str_signal_expression e)^"In"^(str_typed_variant_set s)
+	| Default(e1, e2) -> (str_signal_expression e1)^"Default"^(str_signal_expression e2)
+	| When(e1, e2) -> (str_signal_expression e1)^"When"^(str_signal_expression e2) 
+	| WhenAtom(i)-> "When"^(str_id i)
+	| WhenNotAtom(i)-> "WhenNot"^(str_id i)
+	| NotAtom(i)-> "Not"^(str_id i)
+	| AndExp(e1, e2) -> (str_signal_expression e1)^"And"^(str_signal_expression e2)
+	| OrExp(e1, e2)-> (str_signal_expression e1)^"Or"^(str_signal_expression e2)
+	| IntegerConstant(i) -> (string_of_int i)
+	| FunctionCall(i, sel)-> "Call"^(str_id i)^"_"^(str_sig_exp_l sel)^"_"
+	| Plus(e1,e2) ->   (str_signal_expression e1)^"Pl" ^ (str_signal_expression e2)
+	| Minus(e1,e2) ->  (str_signal_expression e1)^"Mi" ^ (str_signal_expression e2)
+	| Times(e1,e2) ->  (str_signal_expression e1)^"Ti" ^ (str_signal_expression e2)
 ;;
 
 let rec str_assignment = function
