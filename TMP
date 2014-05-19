@@ -12,3 +12,25 @@
 				in build_f [] (List.rev s.process_list)
 			in {res = "" ; fathers=init_fathers; l1 = [] ; l2 = [] ; l3 = [] ; l4 = [] ; b = "" ; e = "" ; decl = "" ; lab = "","" ; box = false}
 	end
+
+
+
+
+
+	let tfr_proc_hd param pn sd lpl =
+		let rec print_pname pn = function
+			|[] -> pn
+			|e::l -> print_pname (pn^e) l
+		in ({process_name = pn ; signal_declarations = sd ; local_process_list = lpl;},
+		{ res =  param.res; fathers = param.fathers;
+			l1 = param.l1 ; l2 = param.l2 ; l3 = param.l3 ; l4 = param.l4 ;
+			b = "digraph "^print_pname pn (List.hd param.fathers)^"{\n"^
+				"\tgraph [rankdir = LR];\n"^
+				"\tnode [shape=record, style=filled];\n"^
+				"\tcenter = true \n\n"
+				^ param.decl;
+			e = "\nlabelloc = \"t\";\n" ^
+				"label = \"process : "^ pn ^"\"\n"^
+				"}\n\n" ;
+			decl = "" ; lab = "","";
+			box = false})
