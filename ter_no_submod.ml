@@ -238,8 +238,14 @@ let build_currents param ph pb =
 	let transform_inst param i = tfr_inst param i.instance_process_name i.instance_output_signals i.instance_input_expressions
 
 
-	let tfr_proc_bd gparam gal gcl gil = 
-		let rec t_proc_bd param al cl il =
+	let tfr_proc_bd gparam gal gcl gil =
+		let rec no_multiple_out_define = function
+			|[] -> []
+			|e::l ->	if(List.exists (fun x -> x.assigned_signal_name 
+										= e.assigned_signal_name) l)
+						then no_multiple_out_define l
+						else e::(no_multiple_out_define l)
+		in let rec t_proc_bd param al cl il =
 			let nal = param.modif.n_bdy.assignment_list
 			and ncl = param.modif.n_bdy.constraint_list
 			and nil = param.modif.n_bdy.instantiation_list
@@ -247,7 +253,7 @@ let build_currents param ph pb =
 			and nsig = param.modif.n_sig
 			in(* (print_string ("Test: \n"^Ter_toString.str_assignment al));*)
 				if nil = []
-				then ({ assignment_list = nal@gal ;
+				then ({ assignment_list = no_multiple_out_define (nal@gal) ;
 						constraint_list = ncl@gcl ;
 						instantiation_list = nil ;},param) 
 				else 
