@@ -1,0 +1,27 @@
+digraph Z{
+	graph [rankdir = LR];
+	node [shape=record, style=filled];
+zW [margin=0,label="        z",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+yOut [margin=0,label="        y",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+xIn [margin=0,label="        x",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+ClE [margin=0,label="^=",size=5];
+zlft [margin=0,label="        z",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+yrgt [margin=0,label="        y",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+ClE->zlft[len=0.5,width=0,dir=none,style=invisible];
+ClE->yrgt[len=0.5,width=0,dir=none,style=invisible];
+zlft->zW [label="truc", color="blue", len=2];
+yOut->yrgt [label="chose", color="blue", len=2];
+labelloc = "t";
+label = "process : Z"}
+digraph Y{
+	graph [rankdir = LR];
+	node [shape=record, style=filled];
+zW [margin=0,label="        z",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+yOut [margin=0,label="        y",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+xIn [margin=0,label="        x",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+zW->yOut [label="plouf", color="blue", len=2];
+Cst3 [margin=0,label="        3",shape=circle,style=filled,width=0.05,fillcolor=black,fixedsize=true];
+Cst3->yOut [label="plouf", color="blue", len=2];
+xIn->zW [label="plouf", color="blue", len=2];
+labelloc = "t";
+label = "process : Y"}
