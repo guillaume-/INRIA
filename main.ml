@@ -7,9 +7,10 @@ let main () =
   with End_of_file -> exit 0
 
 let spec_0 = print_string "----------------------- Lecture ficher -----------------------\n";
-			let s = main() 
-			in print_string "------------------ Verification syntaxique -------------------\n";
-				check (s);;
+			main ()
+  
+let apl_0 = print_string "------------------ Verification syntaxique -------------------\n";
+				check (spec_0);;
 
 let spec_1 = print_string "-- Remplacement symboles arithmétiques -> appels procedures --\n";
 			addCall spec_0;;
@@ -18,4 +19,10 @@ let spec_2 = print_string "----------------- Suppression des submodules --------
 			noSub spec_1;;
 
 let str = Ter_toString.str_specification spec_2;;
-print_string str;
+
+
+(*
+(*let _ = print_string "----------------------- Lecture ficher -----------------------\n";;*)
+let str = schemas_dot (main());;
+
+print_string str;*)
