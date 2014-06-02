@@ -66,3 +66,12 @@ ter_transfos.ml
 
 ter_util.ml
 	définit des fonctions utilitaires
+	
+ter_struc_box.ml
+	définit une structure qui regroupe des informations d'une spécification sous forme de boîte
+
+ter_make_box.ml
+	définit une fonction qui à partir d'une spécification remplit une spec_boxes
+
+ter_use_box.ml
+	définit les fonctions utilitaires à ter_struc_box.ml
