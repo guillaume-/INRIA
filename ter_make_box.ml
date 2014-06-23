@@ -8,8 +8,7 @@ open Ter_identite_p
 open Ter_struc_box
 open Ter_use_box
 
-module Apl_mk_box:aParam = struct
-	type ref = {spec:specification; fathers:(string list) list; res:spec_boxes; current_pr:pr_data;}
+type ref = {spec:specification; fathers:(string list) list; res:spec_boxes; current_pr:pr_data;}
 
 	let init_current_pr f =
 		let fhd = try(List.hd f)with _ -> []
@@ -127,63 +126,21 @@ module Apl_mk_box:aParam = struct
 	let apl_sig_decla param name stype dir = 
 		let c = param.current_pr
 		in match(dir)with
-			Input		-> { spec = param.spec; fathers = param.fathers; res = param.res;
-								current_pr = {
-									pr_name = c.pr_name;
-									pr_fathers = c.pr_fathers;
-									pr_boxes = c.pr_boxes;
-									pr_assigns = c.pr_assigns;
-									pr_cons = c.pr_cons;
-									pr_insts = c.pr_insts;
-									pr_lin = (new_port name c.pr_lin)::c.pr_lin;
-									pr_lout = c.pr_lout;
-									pr_lloc = c.pr_lloc;
-									pr_lconst = c.pr_lconst;
-								}; 
-							}
-			| Output	-> { spec = param.spec; fathers = param.fathers; res = param.res;
-								current_pr = {
-									pr_name = c.pr_name;
-									pr_fathers = c.pr_fathers;
-									pr_boxes = c.pr_boxes;									pr_assigns = c.pr_assigns;
-									pr_cons = c.pr_cons;
-									pr_insts = c.pr_insts;
-									pr_lin = c.pr_lin;
-									pr_lout = (new_port name c.pr_lout)::c.pr_lout;
-									pr_lloc = c.pr_lloc;
-									pr_lconst = c.pr_lconst;
-								}; 
-							}
-			| Local		-> { spec = param.spec; fathers = param.fathers; res = param.res;
-								current_pr = {
-									pr_name = c.pr_name;
-									pr_fathers = c.pr_fathers;
-									pr_boxes = c.pr_boxes;									pr_assigns = c.pr_assigns;
-									pr_cons = c.pr_cons;
-									pr_insts = c.pr_insts;
-									pr_lin = c.pr_lin;
-									pr_lout = c.pr_lout;
-									pr_lloc = (new_port name c.pr_lloc)::c.pr_lloc;
-									pr_lconst = c.pr_lconst;
-								}; 
-							}
+			Input	->	{ param with
+						  current_pr = {c with pr_lin = (new_port name c.pr_lin)::c.pr_lin;};
+						}
+			| Output->	{ param with
+						  current_pr = {c with pr_lout = (new_port name c.pr_lout)::c.pr_lout;};
+						}
+			| Local	->	{ param with
+						  current_pr = {c  with pr_lloc = (new_port name c.pr_lloc)::c.pr_lloc;}
+						}
 
 	let apl_proc_hd param name sp lpl =
 		let c = param.current_pr in
 		let f = try(List.hd param.fathers)with _ -> [] in
-		{	spec = param.spec; fathers = param.fathers; res = param.res;
-			current_pr = {
-				pr_name = name;
-				pr_fathers = f;
-				pr_boxes = c.pr_boxes;
-				pr_assigns = c.pr_assigns;
-				pr_cons = c.pr_cons;
-				pr_insts = c.pr_insts;
-				pr_lin = c.pr_lin;
-				pr_lout = c.pr_lout;
-				pr_lloc = c.pr_lloc;
-				pr_lconst = c.pr_lconst;
-			}; 
+		{	param with
+			current_pr = {c with pr_name = name; pr_fathers = f;}; 
 		}
 
 	let apl_assign param s_name expr =
@@ -257,16 +214,18 @@ module Apl_mk_box:aParam = struct
 			| WhenAtom(id) -> uni_op "when" id
 			| WhenNotAtom(id) -> uni_op "when not" id
 			| NotAtom(id) -> uni_op "not" id
- 			| FunctionCall(id, sig_list) -> let i = uniq id c.pr_boxes
+ 			| FunctionCall(id, sig_list) -> let u = uniq id c.pr_boxes
  			in let inL =
 				let rec build_inL i = function
 					|[] -> []
 					|e::l -> {p_name = "in"; p_uniqid = i;}::(build_inL (i+1) l)
 				in build_inL 0 sig_list
 			in call_op
-				{box_name = id; box_uniqid = i;}
-				({b_inL = inL; b_outL = [port_variable "out"]; b_name = id; b_uniqid = i;}::c.pr_boxes)
-				c.pr_assigns
+				{box_name = id; box_uniqid = u;}
+				({b_inL = inL; b_outL = [port_variable "out"]; b_name = id; b_uniqid = u;}::c.pr_boxes)
+				({l_beg = (port_variable "out"), Some {box_name = id; box_uniqid = u;};
+				 l_end = (port_variable s_name), None
+				}::c.pr_assigns)
 				c.pr_lconst
 				inL
 				sig_list
@@ -275,15 +234,9 @@ module Apl_mk_box:aParam = struct
 		in let new_boxes, new_links, new_k = news
 		in {spec = param.spec; fathers = param.fathers; res = param.res;
 			current_pr = {
-				pr_name = c.pr_name;
-				pr_fathers = c.pr_fathers;
+				c with
 				pr_boxes = new_boxes;
 				pr_assigns = new_links;
-				pr_cons = c.pr_cons;
-				pr_insts = c.pr_insts;
-				pr_lin = c.pr_lin;
-				pr_lout = c.pr_lout;
-				pr_lloc = c.pr_lloc;
 				pr_lconst = new_k;
 			}; 
 		}
@@ -298,19 +251,10 @@ module Apl_mk_box:aParam = struct
 			| ClockWhenNot	-> "^ when not"
 			| ClockExclusive-> "^ #"
 		in
-		{	spec = param.spec; fathers = param.fathers; res = param.res;
+		{	param with
 			current_pr = {
-				pr_name = c.pr_name;
-				pr_fathers = c.pr_fathers;
-				pr_boxes = c.pr_boxes;
-				pr_assigns = c.pr_assigns;
-				pr_cons = {c_beg = port_variable sRight; c_end = port_variable sLeft; c_con = s;}
-						  ::c.pr_cons;
-				pr_insts = c.pr_insts;
-				pr_lin = c.pr_lin;
-				pr_lout = c.pr_lout;
-				pr_lloc = c.pr_lloc;
-				pr_lconst = c.pr_lconst;
+				c with
+				pr_cons = {c_beg = port_variable sRight; c_end = port_variable sLeft; c_con = s;}::c.pr_cons;
 			}; 
 		}
 
@@ -333,15 +277,9 @@ module Apl_mk_box:aParam = struct
 			in forEach init_b init_l c.pr_lconst init_last_box_id (port_variable "out") iie
 		in {spec = param.spec; fathers = param.fathers; res = param.res;
 			current_pr = {
-				pr_name = c.pr_name;
-				pr_fathers = c.pr_fathers;
+				c with
 				pr_boxes = boxes;
-				pr_assigns = c.pr_assigns;
-				pr_cons = c.pr_cons;
 				pr_insts = insts;
-				pr_lin = c.pr_lin;
-				pr_lout = c.pr_lout;
-				pr_lloc = c.pr_lloc;
 				pr_lconst = consts;
 			}; 
 		}
@@ -353,4 +291,3 @@ module Apl_mk_box:aParam = struct
 			res = ((param.current_pr)::(param.res));
 			current_pr = init_current_pr param.fathers;
 		}
-end
