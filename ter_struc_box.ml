@@ -24,6 +24,7 @@ type link = {
 type c_link = {
 	c_beg: port;
 	c_end: port;
+	c_con: string;
 	(* no box for a constraint *)
 }
 type pr_data = {
