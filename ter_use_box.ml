@@ -35,14 +35,14 @@ let l_port_to_box port last_box_in_id last_box_id =
 
 let inL n =
 	let rec build_inL = function
-		|0 -> [{p_name = "in"; p_uniqid = 0;}]
-		|x -> {p_name = "in"; p_uniqid = x;}::(build_inL (x-1))
+		|0 -> []
+		|x -> {p_name = "in"; p_uniqid = x-1;}::(build_inL (x-1))
 	in build_inL n
 
 let outL n =
 	let rec build_outL = function
-		|0 -> [{p_name = "out"; p_uniqid = 0;}]
-		|x -> {p_name = "out"; p_uniqid = x;}::(build_outL (x-1))
+		|0 -> []
+		|x -> {p_name = "out"; p_uniqid = x-1;}::(build_outL (x-1))
 	in build_outL n
 
 let build_box_n_1 name n boxes =
@@ -61,7 +61,7 @@ let bin_box name id = {
 	b_uniqid = id;
 }
 
-let uni_box name id ={
+let uni_box name id = {
 	b_inL = [port_variable "in"];
 	b_outL = [port_variable "out"];
 	b_name = name;
